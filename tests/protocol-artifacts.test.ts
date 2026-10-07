@@ -176,11 +176,11 @@ describe('protocol profile and operation registry', () => {
 
     const lock = parse(lockText) as LockFile
     expect(anthropicManifest.packageIntegrity).toBe(
-      lock.packages?.['@anthropic-ai/sdk@0.115.0']?.resolution?.integrity,
+      lock.packages?.['@anthropic-ai/sdk@0.131.0']?.resolution?.integrity,
     )
     // The standalone package pins the same SDK alias used to generate the snapshot.
     const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
-    expect(pkg.devDependencies['anthropic-sdk-0-115']).toBe('npm:@anthropic-ai/sdk@0.115.0')
+    expect(pkg.devDependencies['anthropic-sdk']).toBe('npm:@anthropic-ai/sdk@0.131.0')
 
   })
 })

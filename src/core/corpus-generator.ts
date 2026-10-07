@@ -311,15 +311,18 @@ function stringCandidates(schema: Schema, path: string): Candidate[] {
     ...(!format ? ['a'.repeat(Math.max(1, minimum))] : []),
     ...(!format && !pattern ? ['λ'.repeat(Math.max(1, minimum))] : []),
   ]
+  const forbiddenPattern = (typeof schema.not === 'object' && schema.not !== null && !Array.isArray(schema.not) && 'pattern' in schema.not) && typeof schema.not.pattern === 'string'
+    ? new RegExp(schema.not.pattern) : undefined
   const expression = pattern ? new RegExp(pattern, typeof schema.patternFlags === 'string' ? schema.patternFlags : '') : undefined
   const values = [...new Set(sourceValues)].filter(value =>
-    value.length >= minimum && value.length <= maximum && (!expression || expression.test(value)))
+    value.length >= minimum && value.length <= maximum && (!expression || expression.test(value))
+    && (!forbiddenPattern || !forbiddenPattern.test(value)))
   if (values.length === 0) {
     throw new UnsupportedSchemaConstructError(path, `string-pattern-without-source-witness:${pattern ?? format ?? ''}`)
   }
   return values.map((value, index) => ({
     value,
-    covers: [`${path}:string:${stringClass(value, index)}`],
+    covers: [`${path}:string:${stringClass(value, index)}`, ...(forbiddenPattern ? [`${path}:not:pattern`] : [])],
   }))
 }
 
@@ -654,7 +657,11 @@ function modifyAtPath(
 }
 
 function rejectUnsupportedKeywords(schema: Schema, path: string): void {
-  for (const keyword of ['not', 'if', 'then', 'else', 'dependentSchemas', 'unevaluatedProperties']) {
+  if ('not' in schema && !(schema.type === 'string' && (typeof schema.not === 'object' && schema.not !== null && !Array.isArray(schema.not) && 'pattern' in schema.not)
+    && Object.keys(schema.not).length === 1 && typeof schema.not.pattern === 'string')) {
+    throw new UnsupportedSchemaConstructError(path, 'not')
+  }
+  for (const keyword of ['if', 'then', 'else', 'dependentSchemas', 'unevaluatedProperties']) {
     if (keyword in schema) { throw new UnsupportedSchemaConstructError(path, keyword) }
   }
   if (Array.isArray(schema.prefixItems)) {
@@ -711,6 +718,8 @@ function schemaAccepts(value: JsonValue, schema: Schema, root: Schema): boolean 
   if (typeof value === 'string') {
     if (typeof schema.minLength === 'number' && value.length < schema.minLength) { return false }
     if (typeof schema.maxLength === 'number' && value.length > schema.maxLength) { return false }
+    if ((typeof schema.not === 'object' && schema.not !== null && !Array.isArray(schema.not) && 'pattern' in schema.not) && typeof schema.not.pattern === 'string'
+      && new RegExp(schema.not.pattern).test(value)) { return false }
     if (typeof schema.pattern === 'string' && !new RegExp(schema.pattern).test(value)) { return false }
   }
   if (typeof value === 'number') {

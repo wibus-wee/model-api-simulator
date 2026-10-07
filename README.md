@@ -57,6 +57,7 @@ try {
           body: {
             id: 'msg_simulator',
             type: 'message',
+            diagnostics: null,
             role: 'assistant',
             model: 'claude-test',
             content: [{ type: 'text', text: 'hello back', citations: null }],
@@ -112,6 +113,7 @@ try {
   const response = {
     id: 'resp_simulator',
     object: 'response',
+    access_programs: null,
     created_at: 1,
     status: 'completed',
     background: false,
@@ -125,6 +127,7 @@ try {
       {
         id: 'msg_1',
         type: 'message',
+        diagnostics: null,
         role: 'assistant',
         status: 'completed',
         content: [
@@ -312,3 +315,11 @@ pnpm start
 ## Origin
 
 Extracted from `packages/model-api-simulator` in Cradle commit [`03cdaf6eea042f919e277457746acb4f2da2f74f`](https://github.com/wibus-wee/cradle-app/tree/03cdaf6eea042f919e277457746acb4f2da2f74f/packages/model-api-simulator). Protocol snapshots, curated fixtures and test suites retain their original provenance. The original Cradle package is unchanged.
+
+## Protocol snapshot refresh (2026-10-07)
+
+- Anthropic declarations and SDK conformance tests: `@anthropic-ai/sdk@0.131.0`.
+- OpenAI OpenAPI: [`ee483b4`](https://github.com/openai/openai-openapi/commit/ee483b4b26b2695fedc5c8af7b187e5986bd0add); SDK conformance tests: `openai@7.30.0`.
+- The core allowlist and stream grammar are unchanged. Generated schemas retain new fields within that profile.
+- Existing scenarios must include `diagnostics: null` in Anthropic messages and `access_programs: null` in OpenAI responses when no value applies. OpenAI delete responses now use `object: 'response.deleted'` with `id` and `deleted`.
+- Witness generation supports string-only `not: { pattern: ... }` constraints, filtering candidates against the forbidden pattern. Other unsupported negation still fails explicitly. Positive witnesses and negative mutations are independently revalidated with AJV.

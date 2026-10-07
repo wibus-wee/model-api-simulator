@@ -11,6 +11,7 @@ const headers = {
 const stableMessage = {
   id: 'msg_1',
   type: 'message',
+  diagnostics: null,
   role: 'assistant',
   model: 'claude-test',
   content: [{ type: 'text', text: 'hello', citations: null }],

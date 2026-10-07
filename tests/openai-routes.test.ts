@@ -6,6 +6,7 @@ const headers = { 'authorization': 'Bearer fake', 'content-type': 'application/j
 const responseFixture = {
   id: 'resp_1',
   object: 'response',
+  access_programs: null,
   created_at: 1,
   status: 'completed',
   background: false,
@@ -81,7 +82,7 @@ describe('openAI routes', () => {
           },
         },
       },
-      { method: 'DELETE', path: '/v1/responses/resp_1', response: {} },
+      { method: 'DELETE', path: '/v1/responses/resp_1', response: { id: 'resp_1', object: 'response.deleted', deleted: true } },
       { method: 'GET', path: '/v1/models', response: { object: 'list', data: [] } },
       {
         method: 'GET',

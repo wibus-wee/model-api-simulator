@@ -1,4 +1,4 @@
-import Anthropic from 'anthropic-sdk-0-115'
+import Anthropic from 'anthropic-sdk'
 import { describe, expect, it } from 'vitest'
 
 import type { ModelApiSimulator, SimulatorExchange } from '../src'
@@ -7,6 +7,7 @@ import { startModelApiSimulator } from '../src'
 const message = {
   id: 'msg_simulator',
   type: 'message',
+  diagnostics: null,
   role: 'assistant',
   model: 'claude-test',
   content: [{ type: 'text', text: 'hello', citations: null }],

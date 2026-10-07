@@ -35,7 +35,7 @@ const names = [
   'AnthropicBetaModelRetrieveParams',
 ] as const
 async function main(): Promise<void> {
-  const sdkRoot = resolve(ROOT, 'node_modules/anthropic-sdk-0-115')
+  const sdkRoot = resolve(ROOT, 'node_modules/anthropic-sdk')
   const packageText = await readFile(resolve(sdkRoot, 'package.json'), 'utf8')
   const packageJson = JSON.parse(packageText) as { version: string }
   const entry = resolve(ROOT, 'protocol/anthropic/schema-entry.ts')

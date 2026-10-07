@@ -112,6 +112,7 @@ function completedResponse(
   return {
     id,
     object: 'response',
+    access_programs: null,
     created_at: 1,
     status: 'completed',
     background: false,

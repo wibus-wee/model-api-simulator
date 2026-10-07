@@ -191,3 +191,25 @@ describe('schema corpus generator', () => {
     }
   })
 })
+
+
+describe('upstream negated string patterns', () => {
+  it('filters forbidden source witnesses and records the constraint', () => {
+    const schema = { type: 'string', minLength: 1, maxLength: 96,
+      pattern: '^[A-Za-z0-9._~:-]+$', not: { pattern: '[^A-Za-z0-9._~:-]' },
+      examples: ['valid_target', 'invalid target'] }
+    const witnesses = generateSchemaWitnesses(schema)
+    const validate = ajv.compile(schema)
+    expect(witnesses.length).toBeGreaterThan(0)
+    expect(witnesses.every(witness => validate(witness.value))).toBe(true)
+    expect(witnesses.some(witness => witness.value === 'invalid target')).toBe(false)
+    expect(enumerateSchemaObligations(schema)).toContain('#:not:pattern')
+    expect(validate('invalid target')).toBe(false)
+  })
+  it('does not silently accept unsupported negation or impossible witnesses', () => {
+    expect(() => generateSchemaWitnesses({ type: 'string', not: { type: 'string' } }))
+      .toThrow(UnsupportedSchemaConstructError)
+    expect(() => generateSchemaWitnesses({ type: 'string', not: { pattern: '.*' } }))
+      .toThrow(UnsupportedSchemaConstructError)
+  })
+})

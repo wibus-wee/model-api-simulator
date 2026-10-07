@@ -26,6 +26,7 @@
           ],
           "type": "object"
         },
+        "BetaCacheMissReason": false,
         "BetaContainer": {
           "additionalProperties": false,
           "description": "Information about the container used in the request (for the code execution tool)",
@@ -42,7 +43,7 @@
               "anyOf": [
                 {
                   "items": {
-                    "$ref": "#/definitions/BetaSkill"
+                    "$ref": "#/definitions/BetaContainerSkill"
                   },
                   "type": "array"
                 },
@@ -60,6 +61,34 @@
           ],
           "type": "object"
         },
+        "BetaContainerSkill": {
+          "additionalProperties": false,
+          "description": "A skill that was loaded in a container (response model).",
+          "properties": {
+            "skill_id": {
+              "description": "Skill ID",
+              "type": "string"
+            },
+            "type": {
+              "description": "Type of skill - either 'anthropic' (built-in) or 'custom' (user-defined)",
+              "enum": [
+                "anthropic",
+                "custom"
+              ],
+              "type": "string"
+            },
+            "version": {
+              "description": "The resolved version: a skill version ID for custom skills.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "skill_id",
+            "type",
+            "version"
+          ],
+          "type": "object"
+        },
         "BetaContentBlock": {
           "anyOf": [
             {
@@ -74,8 +103,7 @@
             {
               "$ref": "#/definitions/BetaToolUseBlock"
             }
-          ],
-          "description": "Response model for a file uploaded to the container."
+          ]
         },
         "BetaContextManagementResponse": {
           "additionalProperties": false,
@@ -93,10 +121,13 @@
         },
         "BetaDiagnostics": {
           "additionalProperties": false,
-          "description": "Response envelope for request-level diagnostics. Present (possibly null) whenever the caller supplied `diagnostics` on the request.",
+          "description": "Request-level diagnostics: why the prompt cache could not fully reuse the prefix of the request named by `diagnostics.previous_message_id`.",
           "properties": {
             "cache_miss_reason": {
               "anyOf": [
+                {
+                  "$ref": "#/definitions/BetaCacheMissReason"
+                },
                 {
                   "type": "null"
                 }
@@ -205,8 +236,9 @@
           ],
           "type": "object"
         },
+        "BetaInputTransformation": false,
         "BetaIterationsUsage": {
-          "description": "Per-iteration token usage breakdown.\n\nEach entry represents one sampling iteration, with its own input/output token counts and cache statistics. This allows you to:\n\n- Determine which iterations exceeded long context thresholds (>=200k tokens)\n- Calculate the true context window size from the last iteration\n- Understand token accumulation across server-side tool use loops",
+          "description": "Per-iteration token usage breakdown.\n\nEach entry represents one sampling iteration, with its own input/output token counts and cache statistics, discriminated by `type`. For `message` entries (model sampling iterations, such as the turns of a server-side tool use loop), this allows you to:\n\n- Determine which iterations exceeded long context thresholds (>=200k tokens)\n- Calculate the context window size from the last `message` entry\n- Understand token accumulation across server-side tool use loops\n\nA `compaction` entry reports the token usage of the compaction operation itself — the server-side request that summarizes the context being closed — NOT the size of the context that was compacted away, and its token counts can be much smaller than that closed context (for example, a compaction that closes a ~200k-token context can report only a few thousand tokens). Do not derive the context window size from a `compaction` entry, even when it is the last entry. A `compaction` entry's tokens are not included in the top-level `usage` fields. When an input-token trigger is in effect (the default — 150,000 tokens unless configured otherwise), each `compaction` entry closes a context that had reached at least that threshold, though the context can exceed it by the final iteration's output and tool results.",
           "items": false,
           "type": "array"
         },
@@ -222,7 +254,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Information about the container used in the request (for the code execution tool)"
+              "description": "Information about the container used in this request.\n\nThis will be non-null if a container tool (e.g. code execution) was used."
             },
             "content": {
               "description": "Content generated by the model.\n\nThis is an array of content blocks, each of which has a `type` that determines its shape.\n\nExample:\n\n```json [{ \"type\": \"text\", \"text\": \"Hi, I'm Claude.\" }] ```\n\nIf the request input `messages` ended with an `assistant` turn, then the response `content` will continue directly from that last turn. You can use this to constrain the model's output.\n\nFor example, if the input `messages` were:\n\n```json [   {     \"role\": \"user\",     \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"   },   { \"role\": \"assistant\", \"content\": \"The best answer is (\" } ] ```\n\nThen the response `content` might be:\n\n```json [{ \"type\": \"text\", \"text\": \"B)\" }] ```",
@@ -251,11 +283,25 @@
                   "type": "null"
                 }
               ],
-              "description": "Response envelope for request-level diagnostics. Present (possibly null) whenever the caller supplied `diagnostics` on the request."
+              "description": "Request-level diagnostics. `null` when the request did not supply `diagnostics`, or when it did and no prompt-cache divergence was detected."
             },
             "id": {
               "description": "Unique object identifier.\n\nThe format and length of IDs may change over time.",
               "type": "string"
+            },
+            "input_transformations": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/definitions/BetaInputTransformation"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Changes the API made to the request's input before showing it to the model, and blocks that failed a binding check but were left unchanged: one entry per block, in request order. Two entry types today. `thinking_dropped` — a `thinking`, `redacted_thinking` or `connector_text` block from the request's `messages` that was removed from the prompt instead of being shown to the model because it failed a binding check. `thinking_mismatch_allowed` — a `thinking` or `redacted_thinking` block that failed the conversation check (the conversation before it differs from the one it was created in, or it carries no record of one on a model that requires it) and was shown to the model all the same, because that check is not enforced for this request. More entry types may be added over time; ignore types you do not recognize.\n\nRequires `anthropic-beta: thinking-binding-controls-2026-08-01`. Present on every such response from a model that supports extended thinking, as `[]` when there is no entry to report; without the beta, blocks are removed or left in place all the same but nothing is reported. Removed blocks contribute nothing to `usage.input_tokens`; blocks left in place count as sent. When streaming, the array is final in `message_start`; the final `message_delta` event carries it only when a server-side model fallback happened mid-stream, in which case it holds the serving model's entries and replaces the one in `message_start`."
             },
             "model": {
               "$ref": "#/definitions/Model",
@@ -272,7 +318,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Structured information about a refusal."
+              "description": "Structured information about why model output stopped.\n\nThis is `null` when the `stop_reason` has no additional detail to report."
             },
             "stop_reason": {
               "anyOf": [
@@ -335,6 +381,7 @@
           "additionalProperties": false,
           "properties": {
             "data": {
+              "description": "The contents of this redacted thinking block, returned when portions of the model's thinking were safety-redacted. This field is opaque and encrypted, with no readable content.\n\nPass `redacted_thinking` blocks back to the API unchanged when continuing a multi-turn conversation.\n\nSee [extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking#redacted-thinking-blocks) for details.",
               "type": "string"
             },
             "type": {
@@ -363,34 +410,6 @@
           "required": [
             "web_fetch_requests",
             "web_search_requests"
-          ],
-          "type": "object"
-        },
-        "BetaSkill": {
-          "additionalProperties": false,
-          "description": "A skill that was loaded in a container (response model).",
-          "properties": {
-            "skill_id": {
-              "description": "Skill ID",
-              "type": "string"
-            },
-            "type": {
-              "description": "Type of skill - either 'anthropic' (built-in) or 'custom' (user-defined)",
-              "enum": [
-                "anthropic",
-                "custom"
-              ],
-              "type": "string"
-            },
-            "version": {
-              "description": "Skill version or 'latest' for most recent version",
-              "type": "string"
-            }
-          },
-          "required": [
-            "skill_id",
-            "type",
-            "version"
           ],
           "type": "object"
         },
@@ -444,9 +463,11 @@
           "additionalProperties": false,
           "properties": {
             "signature": {
+              "description": "A value used to verify that this thinking block was generated by Claude when it is passed back to the API.\n\nThis is an opaque field and should not be interpreted or parsed. When passing thinking blocks back to the API (required when using tools with extended thinking), pass them back exactly as received, with this field intact.\n\nSee [extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking) for details.",
               "type": "string"
             },
             "thinking": {
+              "description": "The text of Claude's thinking process for this block.",
               "type": "string"
             },
             "type": {
@@ -469,8 +490,7 @@
                 {
                   "$ref": "#/definitions/BetaDirectCaller"
                 }
-              ],
-              "description": "Tool invocation directly from the model."
+              ]
             },
             "id": {
               "type": "string"
@@ -478,6 +498,13 @@
             "input": {},
             "name": {
               "type": "string"
+            },
+            "toolset_name": {
+              "description": "For a toolset member tool_use, the toolset family.",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "type": {
               "const": "tool_use",
@@ -529,7 +556,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Outcome of the `fallback_credit_token` presented on this request."
+              "description": "Outcome of the `fallback_credit_token` presented on this request.\n\nPresent on every response to a non-batch request that carried a `fallback_credit_token`, in either redemption mode; absent otherwise (batch items accept and ignore the token and carry no outcome object)."
             },
             "inference_geo": {
               "description": "The geographic region where inference was performed for this request.",
@@ -551,7 +578,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Per-iteration token usage breakdown.\n\nEach entry represents one sampling iteration, with its own input/output token counts and cache statistics. This allows you to:\n\n- Determine which iterations exceeded long context thresholds (>=200k tokens)\n- Calculate the true context window size from the last iteration\n- Understand token accumulation across server-side tool use loops"
+              "description": "Per-iteration token usage breakdown.\n\nEach entry represents one sampling iteration, with its own input/output token counts and cache statistics, discriminated by `type`. For `message` entries (model sampling iterations, such as the turns of a server-side tool use loop), this allows you to:\n\n- Determine which iterations exceeded long context thresholds (>=200k tokens)\n- Calculate the context window size from the last `message` entry\n- Understand token accumulation across server-side tool use loops\n\nA `compaction` entry reports the token usage of the compaction operation itself — the server-side request that summarizes the context being closed — NOT the size of the context that was compacted away, and its token counts can be much smaller than that closed context (for example, a compaction that closes a ~200k-token context can report only a few thousand tokens). Do not derive the context window size from a `compaction` entry, even when it is the last entry. A `compaction` entry's tokens are not included in the top-level `usage` fields. When an input-token trigger is in effect (the default — 150,000 tokens unless configured otherwise), each `compaction` entry closes a context that had reached at least that threshold, though the context can exceed it by the final iteration's output and tool results."
             },
             "output_tokens": {
               "description": "The number of output tokens which were used.",
@@ -593,7 +620,7 @@
               ]
             },
             "speed": {
-              "description": "Inference speed mode. `fast` provides significantly faster output token generation at premium pricing. Not all models support `fast`; invalid combinations are rejected at create time.",
+              "description": "The inference speed mode used for this request.",
               "enum": [
                 "standard",
                 "fast",
@@ -628,6 +655,10 @@
             },
             {
               "enum": [
+                "claude-sonnet-5-5",
+                "claude-fable-5-1",
+                "claude-opus-5-5",
+                "claude-mythos-5-1",
                 "claude-sonnet-5",
                 "claude-fable-5",
                 "claude-mythos-5",
@@ -642,9 +673,7 @@
                 "claude-opus-4-5",
                 "claude-opus-4-5-20251101",
                 "claude-sonnet-4-5",
-                "claude-sonnet-4-5-20250929",
-                "claude-opus-4-1",
-                "claude-opus-4-1-20250805"
+                "claude-sonnet-4-5-20250929"
               ],
               "type": "string"
             }
@@ -686,6 +715,8 @@
                 "fast-mode-2026-02-01",
                 "output-300k-2026-03-24",
                 "user-profiles-2026-03-24",
+                "user-profiles-2026-08-18",
+                "user-profiles-2026-09-04",
                 "advisor-tool-2026-03-01",
                 "managed-agents-2026-04-01",
                 "cache-diagnosis-2026-04-07",
@@ -695,7 +726,23 @@
                 "server-side-fallback-2026-07-01",
                 "fallback-credit-2026-06-01",
                 "fallback-credit-2026-07-01",
-                "agent-memory-2026-07-22"
+                "agent-memory-2026-07-22",
+                "mid-conversation-tool-changes-2026-07-01",
+                "compact-2026-01-12",
+                "computer-use-2025-11-24",
+                "mcp-tunnels-2026-06-22",
+                "structured-outputs-2025-11-13",
+                "task-budgets-2026-03-13",
+                "thinking-display-updates-2026-08-18",
+                "ce-user-management-2026-07-13",
+                "mid-conversation-output-config-2026-07-01",
+                "thinking-binding-controls-2026-08-01",
+                "mid-conversation-system-clear-at-2026-08-21",
+                "compact-2026-09-04",
+                "inline-tools-2026-09-15",
+                "mcp-client-2026-09-15",
+                "ce-plugins-2026-09-01",
+                "spend-limit-reads-2026-09-26"
               ],
               "type": "string"
             }
@@ -721,8 +768,7 @@
             {
               "$ref": "#/definitions/BetaToolResultBlockParam"
             }
-          ],
-          "description": "Regular text content."
+          ]
         },
         "BetaContextManagementConfig": {
           "additionalProperties": false,
@@ -752,6 +798,18 @@
         "BetaMessageParam": {
           "additionalProperties": false,
           "properties": {
+            "clear_at": {
+              "description": "How long this system message's text stays in front of the model. `\"never\"` (the default) renders it on every request that includes it. `\"next_user_message\"` renders it only for the user turn it follows: once a later `role: \"user\"` message exists in `messages` the message stays in the array (send it unchanged) but is no longer shown to the model. Only permitted on `role: \"system\"` messages.",
+              "enum": [
+                "next_user_message",
+                "never",
+                null
+              ],
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "content": {
               "anyOf": [
                 {
@@ -764,6 +822,17 @@
                   "type": "array"
                 }
               ]
+            },
+            "output_config": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BetaSystemMessageOutputConfig"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Per-message output configuration on a role:\"system\" input message.\n\nFields here apply per-turn; `format` remains top-level only. An empty `{}` is accepted on a message that carries content; a message with neither content nor output_config fields is rejected."
             },
             "role": {
               "enum": [
@@ -784,7 +853,7 @@
           "additionalProperties": false,
           "properties": {
             "effort": {
-              "description": "All possible effort levels.",
+              "description": "How much effort the model should put into its response. Higher effort levels may result in more thorough analysis but take longer.\n\nValid values are `low`, `medium`, `high`, `xhigh`, or `max`.",
               "enum": [
                 "low",
                 "medium",
@@ -812,7 +881,7 @@
                   "type": "null"
                 }
               ],
-              "description": "User-configurable total token budget across contexts."
+              "description": "Configuration for token budget tracking across contexts."
             }
           },
           "type": "object"
@@ -821,6 +890,7 @@
           "additionalProperties": false,
           "properties": {
             "data": {
+              "description": "The `data` value of this redacted thinking block, exactly as returned by the API in a previous response. Opaque and encrypted; pass it back unchanged.",
               "type": "string"
             },
             "type": {
@@ -896,6 +966,28 @@
           ],
           "type": "object"
         },
+        "BetaSystemMessageOutputConfig": {
+          "additionalProperties": false,
+          "description": "Per-message output configuration on a role:\"system\" input message.\n\nFields here apply per-turn; `format` remains top-level only. An empty `{}` is accepted on a message that carries content; a message with neither content nor output_config fields is rejected.",
+          "properties": {
+            "effort": {
+              "description": "How much effort the model should put into its response. Higher effort levels may result in more thorough analysis but take longer.\n\nValid values are `low`, `medium`, `high`, `xhigh`, or `max`.",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "xhigh",
+                "max",
+                null
+              ],
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        },
         "BetaTextBlockParam": {
           "additionalProperties": false,
           "properties": {
@@ -939,9 +1031,11 @@
           "additionalProperties": false,
           "properties": {
             "signature": {
+              "description": "The `signature` value of this thinking block, exactly as returned by the API in a previous response. Used to verify that the block was generated by Claude.\n\nThinking blocks must be passed back unmodified and in their original order; a modified block results in a 400 `invalid_request_error`.",
               "type": "string"
             },
             "thinking": {
+              "description": "The `thinking` text of this block as returned by the API.",
               "type": "string"
             },
             "type": {
@@ -1101,6 +1195,13 @@
             "tool_use_id": {
               "type": "string"
             },
+            "toolset_name": {
+              "description": "For a toolset member tool_result, the toolset family of the paired tool_use.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "type": {
               "const": "tool_result",
               "type": "string"
@@ -1128,8 +1229,7 @@
                 {
                   "$ref": "#/definitions/BetaDirectCaller"
                 }
-              ],
-              "description": "Tool invocation directly from the model."
+              ]
             },
             "id": {
               "type": "string"
@@ -1137,6 +1237,13 @@
             "input": {},
             "name": {
               "type": "string"
+            },
+            "toolset_name": {
+              "description": "For a toolset member tool_use, the toolset family this member belongs to.",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "type": {
               "const": "tool_use",
@@ -1168,6 +1275,14 @@
                 }
               ],
               "description": "Body param: Top-level cache control automatically applies a cache_control marker to the last cacheable block in the request."
+            },
+            "compaction": {
+              "anyOf": [
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Body param: Compaction configuration.\n\nWhen set on `POST /v1/messages`, the request is a compaction request: the conversation in `messages` is summarized and the response holds only the resulting `compaction` block (`stop_reason` `\"compaction\"`), which later requests send first in `messages` in place of the messages it summarizes. `POST /v1/messages/count_tokens` accepts this parameter and ignores it: the count it returns is for the conversation in `messages` as sent. Cannot be combined with `context_management`."
             },
             "context_management": {
               "anyOf": [
@@ -1211,7 +1326,7 @@
               "description": "Body param: Deprecated: Use `output_config.format` instead. See [structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)\n\nA schema to specify Claude's output format in responses. This parameter will be removed in a future release."
             },
             "speed": {
-              "description": "Body param: Inference speed mode. `fast` provides significantly faster output token generation at premium pricing. Not all models support `fast`; invalid combinations are rejected at create time.",
+              "description": "Body param: The inference speed mode for this request. `\"fast\"` enables high output-tokens-per-second inference.",
               "enum": [
                 "standard",
                 "fast",
@@ -1258,6 +1373,10 @@
             "user_profile_id": {
               "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization. Requires the `user-profiles` beta header.",
               "type": "string"
+            },
+            "workspace_id": {
+              "description": "Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).\n\nOnly needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.",
+              "type": "string"
             }
           },
           "required": [
@@ -1273,6 +1392,10 @@
             },
             {
               "enum": [
+                "claude-sonnet-5-5",
+                "claude-fable-5-1",
+                "claude-opus-5-5",
+                "claude-mythos-5-1",
                 "claude-sonnet-5",
                 "claude-fable-5",
                 "claude-mythos-5",
@@ -1287,9 +1410,7 @@
                 "claude-opus-4-5",
                 "claude-opus-4-5-20251101",
                 "claude-sonnet-4-5",
-                "claude-sonnet-4-5-20250929",
-                "claude-opus-4-1",
-                "claude-opus-4-1-20250805"
+                "claude-sonnet-4-5-20250929"
               ],
               "type": "string"
             }
@@ -1331,6 +1452,8 @@
                 "fast-mode-2026-02-01",
                 "output-300k-2026-03-24",
                 "user-profiles-2026-03-24",
+                "user-profiles-2026-08-18",
+                "user-profiles-2026-09-04",
                 "advisor-tool-2026-03-01",
                 "managed-agents-2026-04-01",
                 "cache-diagnosis-2026-04-07",
@@ -1340,7 +1463,23 @@
                 "server-side-fallback-2026-07-01",
                 "fallback-credit-2026-06-01",
                 "fallback-credit-2026-07-01",
-                "agent-memory-2026-07-22"
+                "agent-memory-2026-07-22",
+                "mid-conversation-tool-changes-2026-07-01",
+                "compact-2026-01-12",
+                "computer-use-2025-11-24",
+                "mcp-tunnels-2026-06-22",
+                "structured-outputs-2025-11-13",
+                "task-budgets-2026-03-13",
+                "thinking-display-updates-2026-08-18",
+                "ce-user-management-2026-07-13",
+                "mid-conversation-output-config-2026-07-01",
+                "thinking-binding-controls-2026-08-01",
+                "mid-conversation-system-clear-at-2026-08-21",
+                "compact-2026-09-04",
+                "inline-tools-2026-09-15",
+                "mcp-client-2026-09-15",
+                "ce-plugins-2026-09-01",
+                "spend-limit-reads-2026-09-26"
               ],
               "type": "string"
             }
@@ -1394,8 +1533,7 @@
             {
               "$ref": "#/definitions/BetaToolResultBlockParam"
             }
-          ],
-          "description": "Regular text content."
+          ]
         },
         "BetaContextManagementConfig": {
           "additionalProperties": false,
@@ -1525,6 +1663,18 @@
         "BetaMessageParam": {
           "additionalProperties": false,
           "properties": {
+            "clear_at": {
+              "description": "How long this system message's text stays in front of the model. `\"never\"` (the default) renders it on every request that includes it. `\"next_user_message\"` renders it only for the user turn it follows: once a later `role: \"user\"` message exists in `messages` the message stays in the array (send it unchanged) but is no longer shown to the model. Only permitted on `role: \"system\"` messages.",
+              "enum": [
+                "next_user_message",
+                "never",
+                null
+              ],
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "content": {
               "anyOf": [
                 {
@@ -1537,6 +1687,17 @@
                   "type": "array"
                 }
               ]
+            },
+            "output_config": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BetaSystemMessageOutputConfig"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Per-message output configuration on a role:\"system\" input message.\n\nFields here apply per-turn; `format` remains top-level only. An empty `{}` is accepted on a message that carries content; a message with neither content nor output_config fields is rejected."
             },
             "role": {
               "enum": [
@@ -1570,7 +1731,7 @@
           "additionalProperties": false,
           "properties": {
             "effort": {
-              "description": "All possible effort levels.",
+              "description": "How much effort the model should put into its response. Higher effort levels may result in more thorough analysis but take longer.\n\nValid values are `low`, `medium`, `high`, `xhigh`, or `max`.",
               "enum": [
                 "low",
                 "medium",
@@ -1598,7 +1759,7 @@
                   "type": "null"
                 }
               ],
-              "description": "User-configurable total token budget across contexts."
+              "description": "Configuration for token budget tracking across contexts."
             }
           },
           "type": "object"
@@ -1607,6 +1768,7 @@
           "additionalProperties": false,
           "properties": {
             "data": {
+              "description": "The `data` value of this redacted thinking block, exactly as returned by the API in a previous response. Opaque and encrypted; pass it back unchanged.",
               "type": "string"
             },
             "type": {
@@ -1709,6 +1871,28 @@
           ],
           "type": "object"
         },
+        "BetaSystemMessageOutputConfig": {
+          "additionalProperties": false,
+          "description": "Per-message output configuration on a role:\"system\" input message.\n\nFields here apply per-turn; `format` remains top-level only. An empty `{}` is accepted on a message that carries content; a message with neither content nor output_config fields is rejected.",
+          "properties": {
+            "effort": {
+              "description": "How much effort the model should put into its response. Higher effort levels may result in more thorough analysis but take longer.\n\nValid values are `low`, `medium`, `high`, `xhigh`, or `max`.",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "xhigh",
+                "max",
+                null
+              ],
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        },
         "BetaTextBlockParam": {
           "additionalProperties": false,
           "properties": {
@@ -1752,9 +1936,11 @@
           "additionalProperties": false,
           "properties": {
             "signature": {
+              "description": "The `signature` value of this thinking block, exactly as returned by the API in a previous response. Used to verify that the block was generated by Claude.\n\nThinking blocks must be passed back unmodified and in their original order; a modified block results in a 400 `invalid_request_error`.",
               "type": "string"
             },
             "thinking": {
+              "description": "The `thinking` text of this block as returned by the API.",
               "type": "string"
             },
             "type": {
@@ -1914,6 +2100,13 @@
             "tool_use_id": {
               "type": "string"
             },
+            "toolset_name": {
+              "description": "For a toolset member tool_result, the toolset family of the paired tool_use.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "type": {
               "const": "tool_result",
               "type": "string"
@@ -1930,8 +2123,7 @@
             {
               "$ref": "#/definitions/BetaTool"
             }
-          ],
-          "description": "Code execution tool with REPL state persistence (daemon mode + gVisor checkpoint)."
+          ]
         },
         "BetaToolUseBlockParam": {
           "additionalProperties": false,
@@ -1949,8 +2141,7 @@
                 {
                   "$ref": "#/definitions/BetaDirectCaller"
                 }
-              ],
-              "description": "Tool invocation directly from the model."
+              ]
             },
             "id": {
               "type": "string"
@@ -1958,6 +2149,13 @@
             "input": {},
             "name": {
               "type": "string"
+            },
+            "toolset_name": {
+              "description": "For a toolset member tool_use, the toolset family this member belongs to.",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "type": {
               "const": "tool_use",
@@ -2000,6 +2198,14 @@
               ],
               "description": "Body param: Top-level cache control automatically applies a cache_control marker to the last cacheable block in the request."
             },
+            "compaction": {
+              "anyOf": [
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Body param: Compaction configuration.\n\nWhen set on `POST /v1/messages`, the request is a compaction request: the conversation in `messages` is summarized and the response holds only the resulting `compaction` block (`stop_reason` `\"compaction\"`), which later requests send first in `messages` in place of the messages it summarizes. `POST /v1/messages/count_tokens` accepts this parameter and ignores it: the count it returns is for the conversation in `messages` as sent. Cannot be combined with `context_management`."
+            },
             "container": {
               "anyOf": [
                 {
@@ -2034,7 +2240,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Body param: Request-level diagnostics. Currently carries the previous response id for prompt-cache divergence reporting."
+              "description": "Body param: Request-level diagnostics. Supply `previous_message_id` to have the response include `diagnostics.cache_miss_reason` explaining any prompt-cache divergence from that prior request."
             },
             "fallback_credit_token": {
               "anyOf": [
@@ -2115,7 +2321,7 @@
               "type": "string"
             },
             "speed": {
-              "description": "Body param: Inference speed mode. `fast` provides significantly faster output token generation at premium pricing. Not all models support `fast`; invalid combinations are rejected at create time.",
+              "description": "Body param: The inference speed mode for this request. `\"fast\"` enables high output-tokens-per-second inference.",
               "enum": [
                 "standard",
                 "fast",
@@ -2135,7 +2341,7 @@
             },
             "stream": {
               "const": false,
-              "description": "Body param: Whether to incrementally stream the response using server-sent events.\n\nSee [streaming](https://platform.claude.com/docs/en/build-with-claude/streaming) for details.",
+              "description": "Body param: Whether to incrementally stream the response using server-sent events. When `true`, SDKs return a raw event stream.\n\nIn the TypeScript, Python and Ruby SDKs, the recommended way to stream is `messages.stream()`. It sets `stream` for you and accumulates the events into the final message. See [Streaming with SDKs](https://platform.claude.com/docs/en/build-with-claude/streaming#streaming-with-sdks) for an example in each language.",
               "type": "boolean"
             },
             "system": {
@@ -2153,7 +2359,7 @@
               "description": "Body param: System prompt.\n\nA system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role)."
             },
             "temperature": {
-              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not support\nsetting temperature. A value of 1.0 of will be accepted for backwards\ncompatibility, all other values will be rejected with a 400 error.",
+              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not support\nsetting temperature. A value of 1.0 will be accepted for backwards\ncompatibility, all other values will be rejected with a 400 error.",
               "type": "number"
             },
             "thinking": {
@@ -2181,6 +2387,10 @@
             },
             "user_profile_id": {
               "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization. Requires the `user-profiles` beta header.",
+              "type": "string"
+            },
+            "workspace_id": {
+              "description": "Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).\n\nOnly needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.",
               "type": "string"
             }
           },
@@ -2209,6 +2419,14 @@
               ],
               "description": "Body param: Top-level cache control automatically applies a cache_control marker to the last cacheable block in the request."
             },
+            "compaction": {
+              "anyOf": [
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Body param: Compaction configuration.\n\nWhen set on `POST /v1/messages`, the request is a compaction request: the conversation in `messages` is summarized and the response holds only the resulting `compaction` block (`stop_reason` `\"compaction\"`), which later requests send first in `messages` in place of the messages it summarizes. `POST /v1/messages/count_tokens` accepts this parameter and ignores it: the count it returns is for the conversation in `messages` as sent. Cannot be combined with `context_management`."
+            },
             "container": {
               "anyOf": [
                 {
@@ -2243,7 +2461,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Body param: Request-level diagnostics. Currently carries the previous response id for prompt-cache divergence reporting."
+              "description": "Body param: Request-level diagnostics. Supply `previous_message_id` to have the response include `diagnostics.cache_miss_reason` explaining any prompt-cache divergence from that prior request."
             },
             "fallback_credit_token": {
               "anyOf": [
@@ -2324,7 +2542,7 @@
               "type": "string"
             },
             "speed": {
-              "description": "Body param: Inference speed mode. `fast` provides significantly faster output token generation at premium pricing. Not all models support `fast`; invalid combinations are rejected at create time.",
+              "description": "Body param: The inference speed mode for this request. `\"fast\"` enables high output-tokens-per-second inference.",
               "enum": [
                 "standard",
                 "fast",
@@ -2344,7 +2562,7 @@
             },
             "stream": {
               "const": true,
-              "description": "Body param: Whether to incrementally stream the response using server-sent events.\n\nSee [streaming](https://platform.claude.com/docs/en/build-with-claude/streaming) for details.",
+              "description": "Body param: Whether to incrementally stream the response using server-sent events. When `true`, SDKs return a raw event stream.\n\nIn the TypeScript, Python and Ruby SDKs, the recommended way to stream is `messages.stream()`. It sets `stream` for you and accumulates the events into the final message. See [Streaming with SDKs](https://platform.claude.com/docs/en/build-with-claude/streaming#streaming-with-sdks) for an example in each language.",
               "type": "boolean"
             },
             "system": {
@@ -2362,7 +2580,7 @@
               "description": "Body param: System prompt.\n\nA system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role)."
             },
             "temperature": {
-              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not support\nsetting temperature. A value of 1.0 of will be accepted for backwards\ncompatibility, all other values will be rejected with a 400 error.",
+              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not support\nsetting temperature. A value of 1.0 will be accepted for backwards\ncompatibility, all other values will be rejected with a 400 error.",
               "type": "number"
             },
             "thinking": {
@@ -2391,6 +2609,10 @@
             "user_profile_id": {
               "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization. Requires the `user-profiles` beta header.",
               "type": "string"
+            },
+            "workspace_id": {
+              "description": "Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).\n\nOnly needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.",
+              "type": "string"
             }
           },
           "required": [
@@ -2408,6 +2630,10 @@
             },
             {
               "enum": [
+                "claude-sonnet-5-5",
+                "claude-fable-5-1",
+                "claude-opus-5-5",
+                "claude-mythos-5-1",
                 "claude-sonnet-5",
                 "claude-fable-5",
                 "claude-mythos-5",
@@ -2422,9 +2648,7 @@
                 "claude-opus-4-5",
                 "claude-opus-4-5-20251101",
                 "claude-sonnet-4-5",
-                "claude-sonnet-4-5-20250929",
-                "claude-opus-4-1",
-                "claude-opus-4-1-20250805"
+                "claude-sonnet-4-5-20250929"
               ],
               "type": "string"
             }
@@ -2501,6 +2725,25 @@
           ],
           "type": "object"
         },
+        "BetaCompactionCapability": {
+          "additionalProperties": false,
+          "description": "Compaction capability details: whether the model accepts the top-level `compaction` request parameter, with one entry per supported `compaction.type` value.",
+          "properties": {
+            "summarize": {
+              "$ref": "#/definitions/BetaCapabilitySupport",
+              "description": "Whether the summarize compaction type is supported."
+            },
+            "supported": {
+              "description": "Whether this capability is supported by the model.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "summarize",
+            "supported"
+          ],
+          "type": "object"
+        },
         "BetaContextManagementCapability": {
           "additionalProperties": false,
           "description": "Context management capability details.",
@@ -2514,7 +2757,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Indicates whether a capability is supported."
+              "description": "Whether the clear_thinking_20251015 strategy is supported."
             },
             "clear_tool_uses_20250919": {
               "anyOf": [
@@ -2525,7 +2768,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Indicates whether a capability is supported."
+              "description": "Whether the clear_tool_uses_20250919 strategy is supported."
             },
             "compact_20260112": {
               "anyOf": [
@@ -2536,7 +2779,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Indicates whether a capability is supported."
+              "description": "Whether the compact_20260112 strategy is supported."
             },
             "supported": {
               "description": "Whether this capability is supported by the model.",
@@ -2584,7 +2827,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Indicates whether a capability is supported."
+              "description": "Whether the model supports xhigh effort level."
             }
           },
           "required": [
@@ -2612,6 +2855,17 @@
             "code_execution": {
               "$ref": "#/definitions/BetaCapabilitySupport",
               "description": "Whether the model supports code execution tools."
+            },
+            "compaction": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BetaCompactionCapability"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Server-side compaction support (the top-level `compaction` parameter) and the accepted `compaction.type` values."
             },
             "context_management": {
               "$ref": "#/definitions/BetaContextManagementCapability",
@@ -2642,6 +2896,7 @@
             "batch",
             "citations",
             "code_execution",
+            "compaction",
             "context_management",
             "effort",
             "image_input",
@@ -2677,7 +2932,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Model capability information."
+              "description": "Object mapping capability names to their support details. Keys are always present for all known capabilities."
             },
             "created_at": {
               "description": "RFC 3339 datetime string representing the time at which the model was released. May be set to an epoch value if the release date is unknown.",
@@ -2796,6 +3051,8 @@
                 "fast-mode-2026-02-01",
                 "output-300k-2026-03-24",
                 "user-profiles-2026-03-24",
+                "user-profiles-2026-08-18",
+                "user-profiles-2026-09-04",
                 "advisor-tool-2026-03-01",
                 "managed-agents-2026-04-01",
                 "cache-diagnosis-2026-04-07",
@@ -2805,7 +3062,23 @@
                 "server-side-fallback-2026-07-01",
                 "fallback-credit-2026-06-01",
                 "fallback-credit-2026-07-01",
-                "agent-memory-2026-07-22"
+                "agent-memory-2026-07-22",
+                "mid-conversation-tool-changes-2026-07-01",
+                "compact-2026-01-12",
+                "computer-use-2025-11-24",
+                "mcp-tunnels-2026-06-22",
+                "structured-outputs-2025-11-13",
+                "task-budgets-2026-03-13",
+                "thinking-display-updates-2026-08-18",
+                "ce-user-management-2026-07-13",
+                "mid-conversation-output-config-2026-07-01",
+                "thinking-binding-controls-2026-08-01",
+                "mid-conversation-system-clear-at-2026-08-21",
+                "compact-2026-09-04",
+                "inline-tools-2026-09-15",
+                "mcp-client-2026-09-15",
+                "ce-plugins-2026-09-01",
+                "spend-limit-reads-2026-09-26"
               ],
               "type": "string"
             }
@@ -2833,6 +3106,10 @@
             "limit": {
               "description": "Number of items per page.",
               "type": "number"
+            },
+            "workspace_id": {
+              "description": "Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).\n\nOnly needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.",
+              "type": "string"
             }
           },
           "type": "object"
@@ -2872,6 +3149,8 @@
                 "fast-mode-2026-02-01",
                 "output-300k-2026-03-24",
                 "user-profiles-2026-03-24",
+                "user-profiles-2026-08-18",
+                "user-profiles-2026-09-04",
                 "advisor-tool-2026-03-01",
                 "managed-agents-2026-04-01",
                 "cache-diagnosis-2026-04-07",
@@ -2881,7 +3160,23 @@
                 "server-side-fallback-2026-07-01",
                 "fallback-credit-2026-06-01",
                 "fallback-credit-2026-07-01",
-                "agent-memory-2026-07-22"
+                "agent-memory-2026-07-22",
+                "mid-conversation-tool-changes-2026-07-01",
+                "compact-2026-01-12",
+                "computer-use-2025-11-24",
+                "mcp-tunnels-2026-06-22",
+                "structured-outputs-2025-11-13",
+                "task-budgets-2026-03-13",
+                "thinking-display-updates-2026-08-18",
+                "ce-user-management-2026-07-13",
+                "mid-conversation-output-config-2026-07-01",
+                "thinking-binding-controls-2026-08-01",
+                "mid-conversation-system-clear-at-2026-08-21",
+                "compact-2026-09-04",
+                "inline-tools-2026-09-15",
+                "mcp-client-2026-09-15",
+                "ce-plugins-2026-09-01",
+                "spend-limit-reads-2026-09-26"
               ],
               "type": "string"
             }
@@ -2899,6 +3194,10 @@
                 "$ref": "#/definitions/AnthropicBeta"
               },
               "type": "array"
+            },
+            "workspace_id": {
+              "description": "Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).\n\nOnly needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.",
+              "type": "string"
             }
           },
           "type": "object"
@@ -2930,6 +3229,7 @@
           ],
           "type": "object"
         },
+        "BetaCacheMissReason": false,
         "BetaContainer": {
           "additionalProperties": false,
           "description": "Information about the container used in the request (for the code execution tool)",
@@ -2946,7 +3246,7 @@
               "anyOf": [
                 {
                   "items": {
-                    "$ref": "#/definitions/BetaSkill"
+                    "$ref": "#/definitions/BetaContainerSkill"
                   },
                   "type": "array"
                 },
@@ -2964,6 +3264,34 @@
           ],
           "type": "object"
         },
+        "BetaContainerSkill": {
+          "additionalProperties": false,
+          "description": "A skill that was loaded in a container (response model).",
+          "properties": {
+            "skill_id": {
+              "description": "Skill ID",
+              "type": "string"
+            },
+            "type": {
+              "description": "Type of skill - either 'anthropic' (built-in) or 'custom' (user-defined)",
+              "enum": [
+                "anthropic",
+                "custom"
+              ],
+              "type": "string"
+            },
+            "version": {
+              "description": "The resolved version: a skill version ID for custom skills.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "skill_id",
+            "type",
+            "version"
+          ],
+          "type": "object"
+        },
         "BetaContentBlock": {
           "anyOf": [
             {
@@ -2978,8 +3306,7 @@
             {
               "$ref": "#/definitions/BetaToolUseBlock"
             }
-          ],
-          "description": "Response model for a file uploaded to the container."
+          ]
         },
         "BetaContextManagementResponse": {
           "additionalProperties": false,
@@ -2997,10 +3324,13 @@
         },
         "BetaDiagnostics": {
           "additionalProperties": false,
-          "description": "Response envelope for request-level diagnostics. Present (possibly null) whenever the caller supplied `diagnostics` on the request.",
+          "description": "Request-level diagnostics: why the prompt cache could not fully reuse the prefix of the request named by `diagnostics.previous_message_id`.",
           "properties": {
             "cache_miss_reason": {
               "anyOf": [
+                {
+                  "$ref": "#/definitions/BetaCacheMissReason"
+                },
                 {
                   "type": "null"
                 }
@@ -3126,8 +3456,9 @@
           ],
           "type": "object"
         },
+        "BetaInputTransformation": false,
         "BetaIterationsUsage": {
-          "description": "Per-iteration token usage breakdown.\n\nEach entry represents one sampling iteration, with its own input/output token counts and cache statistics. This allows you to:\n\n- Determine which iterations exceeded long context thresholds (>=200k tokens)\n- Calculate the true context window size from the last iteration\n- Understand token accumulation across server-side tool use loops",
+          "description": "Per-iteration token usage breakdown.\n\nEach entry represents one sampling iteration, with its own input/output token counts and cache statistics, discriminated by `type`. For `message` entries (model sampling iterations, such as the turns of a server-side tool use loop), this allows you to:\n\n- Determine which iterations exceeded long context thresholds (>=200k tokens)\n- Calculate the context window size from the last `message` entry\n- Understand token accumulation across server-side tool use loops\n\nA `compaction` entry reports the token usage of the compaction operation itself — the server-side request that summarizes the context being closed — NOT the size of the context that was compacted away, and its token counts can be much smaller than that closed context (for example, a compaction that closes a ~200k-token context can report only a few thousand tokens). Do not derive the context window size from a `compaction` entry, even when it is the last entry. A `compaction` entry's tokens are not included in the top-level `usage` fields. When an input-token trigger is in effect (the default — 150,000 tokens unless configured otherwise), each `compaction` entry closes a context that had reached at least that threshold, though the context can exceed it by the final iteration's output and tool results.",
           "items": false,
           "type": "array"
         },
@@ -3143,7 +3474,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Information about the container used in the request (for the code execution tool)"
+              "description": "Information about the container used in this request.\n\nThis will be non-null if a container tool (e.g. code execution) was used."
             },
             "content": {
               "description": "Content generated by the model.\n\nThis is an array of content blocks, each of which has a `type` that determines its shape.\n\nExample:\n\n```json [{ \"type\": \"text\", \"text\": \"Hi, I'm Claude.\" }] ```\n\nIf the request input `messages` ended with an `assistant` turn, then the response `content` will continue directly from that last turn. You can use this to constrain the model's output.\n\nFor example, if the input `messages` were:\n\n```json [   {     \"role\": \"user\",     \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"   },   { \"role\": \"assistant\", \"content\": \"The best answer is (\" } ] ```\n\nThen the response `content` might be:\n\n```json [{ \"type\": \"text\", \"text\": \"B)\" }] ```",
@@ -3172,11 +3503,25 @@
                   "type": "null"
                 }
               ],
-              "description": "Response envelope for request-level diagnostics. Present (possibly null) whenever the caller supplied `diagnostics` on the request."
+              "description": "Request-level diagnostics. `null` when the request did not supply `diagnostics`, or when it did and no prompt-cache divergence was detected."
             },
             "id": {
               "description": "Unique object identifier.\n\nThe format and length of IDs may change over time.",
               "type": "string"
+            },
+            "input_transformations": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/definitions/BetaInputTransformation"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Changes the API made to the request's input before showing it to the model, and blocks that failed a binding check but were left unchanged: one entry per block, in request order. Two entry types today. `thinking_dropped` — a `thinking`, `redacted_thinking` or `connector_text` block from the request's `messages` that was removed from the prompt instead of being shown to the model because it failed a binding check. `thinking_mismatch_allowed` — a `thinking` or `redacted_thinking` block that failed the conversation check (the conversation before it differs from the one it was created in, or it carries no record of one on a model that requires it) and was shown to the model all the same, because that check is not enforced for this request. More entry types may be added over time; ignore types you do not recognize.\n\nRequires `anthropic-beta: thinking-binding-controls-2026-08-01`. Present on every such response from a model that supports extended thinking, as `[]` when there is no entry to report; without the beta, blocks are removed or left in place all the same but nothing is reported. Removed blocks contribute nothing to `usage.input_tokens`; blocks left in place count as sent. When streaming, the array is final in `message_start`; the final `message_delta` event carries it only when a server-side model fallback happened mid-stream, in which case it holds the serving model's entries and replaces the one in `message_start`."
             },
             "model": {
               "$ref": "#/definitions/Model",
@@ -3193,7 +3538,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Structured information about a refusal."
+              "description": "Structured information about why model output stopped.\n\nThis is `null` when the `stop_reason` has no additional detail to report."
             },
             "stop_reason": {
               "anyOf": [
@@ -3265,7 +3610,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Outcome of the `fallback_credit_token` presented on this request."
+              "description": "Outcome of the `fallback_credit_token` presented on this request.\n\nPresent on every response to a non-batch request that carried a `fallback_credit_token`, in either redemption mode; absent otherwise (batch items accept and ignore the token and carry no outcome object)."
             },
             "input_tokens": {
               "description": "The cumulative number of input tokens which were used.",
@@ -3283,7 +3628,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Per-iteration token usage breakdown.\n\nEach entry represents one sampling iteration, with its own input/output token counts and cache statistics. This allows you to:\n\n- Determine which iterations exceeded long context thresholds (>=200k tokens)\n- Calculate the true context window size from the last iteration\n- Understand token accumulation across server-side tool use loops"
+              "description": "Per-iteration token usage breakdown.\n\nEach entry represents one sampling iteration, with its own input/output token counts and cache statistics, discriminated by `type`. For `message` entries (model sampling iterations, such as the turns of a server-side tool use loop), this allows you to:\n\n- Determine which iterations exceeded long context thresholds (>=200k tokens)\n- Calculate the context window size from the last `message` entry\n- Understand token accumulation across server-side tool use loops\n\nA `compaction` entry reports the token usage of the compaction operation itself — the server-side request that summarizes the context being closed — NOT the size of the context that was compacted away, and its token counts can be much smaller than that closed context (for example, a compaction that closes a ~200k-token context can report only a few thousand tokens). Do not derive the context window size from a `compaction` entry, even when it is the last entry. A `compaction` entry's tokens are not included in the top-level `usage` fields. When an input-token trigger is in effect (the default — 150,000 tokens unless configured otherwise), each `compaction` entry closes a context that had reached at least that threshold, though the context can exceed it by the final iteration's output and tool results."
             },
             "output_tokens": {
               "description": "The cumulative number of output tokens which were used.",
@@ -3391,8 +3736,7 @@
                 {
                   "$ref": "#/definitions/BetaToolUseBlock"
                 }
-              ],
-              "description": "Response model for a file uploaded to the container."
+              ]
             },
             "index": {
               "type": "number"
@@ -3443,6 +3787,20 @@
             "delta": {
               "$ref": "#/definitions/BetaRawMessageDeltaEvent.Delta"
             },
+            "input_transformations": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/definitions/BetaInputTransformation"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Changes the API made to the request's input before showing it to the model, and blocks that failed a binding check but were left unchanged: one entry per block, in request order. Two entry types today. `thinking_dropped` — a `thinking`, `redacted_thinking` or `connector_text` block from the request's `messages` that was removed from the prompt instead of being shown to the model because it failed a binding check. `thinking_mismatch_allowed` — a `thinking` or `redacted_thinking` block that failed the conversation check (the conversation before it differs from the one it was created in, or it carries no record of one on a model that requires it) and was shown to the model all the same, because that check is not enforced for this request. More entry types may be added over time; ignore types you do not recognize.\n\nRequires `anthropic-beta: thinking-binding-controls-2026-08-01`. Present on every such response from a model that supports extended thinking, as `[]` when there is no entry to report; without the beta, blocks are removed or left in place all the same but nothing is reported. Removed blocks contribute nothing to `usage.input_tokens`; blocks left in place count as sent. When streaming, the array is final in `message_start`; the final `message_delta` event carries it only when a server-side model fallback happened mid-stream, in which case it holds the serving model's entries and replaces the one in `message_start`."
+            },
             "type": {
               "const": "message_delta",
               "type": "string"
@@ -3472,7 +3830,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Information about the container used in the request (for the code execution tool)"
+              "description": "Information about the container used in this request.\n\nThis will be non-null if a container tool (e.g. code execution) was used."
             },
             "stop_details": {
               "anyOf": [
@@ -3480,7 +3838,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Structured information about a refusal."
+              "description": "Structured information about why model output stopped.\n\nThis is `null` when the `stop_reason` has no additional detail to report."
             },
             "stop_reason": {
               "anyOf": [
@@ -3563,6 +3921,7 @@
           "additionalProperties": false,
           "properties": {
             "data": {
+              "description": "The contents of this redacted thinking block, returned when portions of the model's thinking were safety-redacted. This field is opaque and encrypted, with no readable content.\n\nPass `redacted_thinking` blocks back to the API unchanged when continuing a multi-turn conversation.\n\nSee [extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking#redacted-thinking-blocks) for details.",
               "type": "string"
             },
             "type": {
@@ -3598,6 +3957,7 @@
           "additionalProperties": false,
           "properties": {
             "signature": {
+              "description": "The `signature` for this thinking block: an opaque value used to verify that the block was generated by Claude when it is passed back to the API. Delivered in a `signature_delta` event just before the block's `content_block_stop` event.",
               "type": "string"
             },
             "type": {
@@ -3608,34 +3968,6 @@
           "required": [
             "signature",
             "type"
-          ],
-          "type": "object"
-        },
-        "BetaSkill": {
-          "additionalProperties": false,
-          "description": "A skill that was loaded in a container (response model).",
-          "properties": {
-            "skill_id": {
-              "description": "Skill ID",
-              "type": "string"
-            },
-            "type": {
-              "description": "Type of skill - either 'anthropic' (built-in) or 'custom' (user-defined)",
-              "enum": [
-                "anthropic",
-                "custom"
-              ],
-              "type": "string"
-            },
-            "version": {
-              "description": "Skill version or 'latest' for most recent version",
-              "type": "string"
-            }
-          },
-          "required": [
-            "skill_id",
-            "type",
-            "version"
           ],
           "type": "object"
         },
@@ -3706,9 +4038,11 @@
           "additionalProperties": false,
           "properties": {
             "signature": {
+              "description": "A value used to verify that this thinking block was generated by Claude when it is passed back to the API.\n\nThis is an opaque field and should not be interpreted or parsed. When passing thinking blocks back to the API (required when using tools with extended thinking), pass them back exactly as received, with this field intact.\n\nSee [extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking) for details.",
               "type": "string"
             },
             "thinking": {
+              "description": "The text of Claude's thinking process for this block.",
               "type": "string"
             },
             "type": {
@@ -3734,6 +4068,7 @@
               ]
             },
             "thinking": {
+              "description": "The incremental `thinking` text for this content block. Concatenate the `thinking` values of successive `thinking_delta` events to assemble the block's full `thinking` value.",
               "type": "string"
             },
             "type": {
@@ -3756,8 +4091,7 @@
                 {
                   "$ref": "#/definitions/BetaDirectCaller"
                 }
-              ],
-              "description": "Tool invocation directly from the model."
+              ]
             },
             "id": {
               "type": "string"
@@ -3765,6 +4099,13 @@
             "input": {},
             "name": {
               "type": "string"
+            },
+            "toolset_name": {
+              "description": "For a toolset member tool_use, the toolset family.",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "type": {
               "const": "tool_use",
@@ -3816,7 +4157,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Outcome of the `fallback_credit_token` presented on this request."
+              "description": "Outcome of the `fallback_credit_token` presented on this request.\n\nPresent on every response to a non-batch request that carried a `fallback_credit_token`, in either redemption mode; absent otherwise (batch items accept and ignore the token and carry no outcome object)."
             },
             "inference_geo": {
               "description": "The geographic region where inference was performed for this request.",
@@ -3838,7 +4179,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Per-iteration token usage breakdown.\n\nEach entry represents one sampling iteration, with its own input/output token counts and cache statistics. This allows you to:\n\n- Determine which iterations exceeded long context thresholds (>=200k tokens)\n- Calculate the true context window size from the last iteration\n- Understand token accumulation across server-side tool use loops"
+              "description": "Per-iteration token usage breakdown.\n\nEach entry represents one sampling iteration, with its own input/output token counts and cache statistics, discriminated by `type`. For `message` entries (model sampling iterations, such as the turns of a server-side tool use loop), this allows you to:\n\n- Determine which iterations exceeded long context thresholds (>=200k tokens)\n- Calculate the context window size from the last `message` entry\n- Understand token accumulation across server-side tool use loops\n\nA `compaction` entry reports the token usage of the compaction operation itself — the server-side request that summarizes the context being closed — NOT the size of the context that was compacted away, and its token counts can be much smaller than that closed context (for example, a compaction that closes a ~200k-token context can report only a few thousand tokens). Do not derive the context window size from a `compaction` entry, even when it is the last entry. A `compaction` entry's tokens are not included in the top-level `usage` fields. When an input-token trigger is in effect (the default — 150,000 tokens unless configured otherwise), each `compaction` entry closes a context that had reached at least that threshold, though the context can exceed it by the final iteration's output and tool results."
             },
             "output_tokens": {
               "description": "The number of output tokens which were used.",
@@ -3880,7 +4221,7 @@
               ]
             },
             "speed": {
-              "description": "Inference speed mode. `fast` provides significantly faster output token generation at premium pricing. Not all models support `fast`; invalid combinations are rejected at create time.",
+              "description": "The inference speed mode used for this request.",
               "enum": [
                 "standard",
                 "fast",
@@ -3915,6 +4256,10 @@
             },
             {
               "enum": [
+                "claude-sonnet-5-5",
+                "claude-fable-5-1",
+                "claude-opus-5-5",
+                "claude-mythos-5-1",
                 "claude-sonnet-5",
                 "claude-fable-5",
                 "claude-mythos-5",
@@ -3929,9 +4274,7 @@
                 "claude-opus-4-5",
                 "claude-opus-4-5-20251101",
                 "claude-sonnet-4-5",
-                "claude-sonnet-4-5-20250929",
-                "claude-opus-4-1",
-                "claude-opus-4-1-20250805"
+                "claude-sonnet-4-5-20250929"
               ],
               "type": "string"
             }
@@ -4182,6 +4525,7 @@
           ],
           "type": "object"
         },
+        "CacheMissReason": false,
         "Container": {
           "additionalProperties": false,
           "description": "Information about the container used in the request (for the code execution tool)",
@@ -4193,11 +4537,54 @@
             "id": {
               "description": "Identifier for the container used in this request",
               "type": "string"
+            },
+            "skills": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/definitions/ContainerSkill"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Skills loaded in the container"
             }
           },
           "required": [
             "id",
-            "expires_at"
+            "expires_at",
+            "skills"
+          ],
+          "type": "object"
+        },
+        "ContainerSkill": {
+          "additionalProperties": false,
+          "description": "A skill that was loaded in a container (response model).",
+          "properties": {
+            "skill_id": {
+              "description": "Skill ID",
+              "type": "string"
+            },
+            "type": {
+              "description": "Type of skill - either 'anthropic' (built-in) or 'custom' (user-defined)",
+              "enum": [
+                "anthropic",
+                "custom"
+              ],
+              "type": "string"
+            },
+            "version": {
+              "description": "The resolved version: a skill version ID for custom skills.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "skill_id",
+            "type",
+            "version"
           ],
           "type": "object"
         },
@@ -4215,8 +4602,28 @@
             {
               "$ref": "#/definitions/ToolUseBlock"
             }
+          ]
+        },
+        "Diagnostics": {
+          "additionalProperties": false,
+          "description": "Request-level diagnostics: why the prompt cache could not fully reuse the prefix of the request named by `diagnostics.previous_message_id`.",
+          "properties": {
+            "cache_miss_reason": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/CacheMissReason"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Explains why the prompt cache could not fully reuse the prefix from the request identified by `diagnostics.previous_message_id`. `null` means diagnosis is still pending — the response was serialized before the background comparison completed."
+            }
+          },
+          "required": [
+            "cache_miss_reason"
           ],
-          "description": "Response model for a file uploaded to the container."
+          "type": "object"
         },
         "DirectCaller": {
           "additionalProperties": false,
@@ -4244,7 +4651,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Information about the container used in the request (for the code execution tool)"
+              "description": "Information about the container used in this request.\n\nThis will be non-null if a container tool (e.g. code execution) was used."
             },
             "content": {
               "description": "Content generated by the model.\n\nThis is an array of content blocks, each of which has a `type` that determines its shape.\n\nExample:\n\n```json [{ \"type\": \"text\", \"text\": \"Hi, I'm Claude.\" }] ```\n\nIf the request input `messages` ended with an `assistant` turn, then the response `content` will continue directly from that last turn. You can use this to constrain the model's output.\n\nFor example, if the input `messages` were:\n\n```json [   {     \"role\": \"user\",     \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"   },   { \"role\": \"assistant\", \"content\": \"The best answer is (\" } ] ```\n\nThen the response `content` might be:\n\n```json [{ \"type\": \"text\", \"text\": \"B)\" }] ```",
@@ -4252,6 +4659,17 @@
                 "$ref": "#/definitions/ContentBlock"
               },
               "type": "array"
+            },
+            "diagnostics": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Diagnostics"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Request-level diagnostics. `null` when the request did not supply `diagnostics`, or when it did and no prompt-cache divergence was detected."
             },
             "id": {
               "description": "Unique object identifier.\n\nThe format and length of IDs may change over time.",
@@ -4272,7 +4690,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Structured information about a refusal."
+              "description": "Structured information about why model output stopped.\n\nThis is `null` when the `stop_reason` has no additional detail to report."
             },
             "stop_reason": {
               "anyOf": [
@@ -4306,6 +4724,7 @@
             "id",
             "container",
             "content",
+            "diagnostics",
             "model",
             "role",
             "stop_details",
@@ -4323,6 +4742,10 @@
             },
             {
               "enum": [
+                "claude-sonnet-5-5",
+                "claude-fable-5-1",
+                "claude-opus-5-5",
+                "claude-mythos-5-1",
                 "claude-sonnet-5",
                 "claude-fable-5",
                 "claude-mythos-5",
@@ -4337,9 +4760,7 @@
                 "claude-opus-4-5",
                 "claude-opus-4-5-20251101",
                 "claude-sonnet-4-5",
-                "claude-sonnet-4-5-20250929",
-                "claude-opus-4-1",
-                "claude-opus-4-1-20250805"
+                "claude-sonnet-4-5-20250929"
               ],
               "type": "string"
             }
@@ -4363,6 +4784,7 @@
           "additionalProperties": false,
           "properties": {
             "data": {
+              "description": "The contents of this redacted thinking block, returned when portions of the model's thinking were safety-redacted. This field is opaque and encrypted, with no readable content.\n\nPass `redacted_thinking` blocks back to the API unchanged when continuing a multi-turn conversation.\n\nSee [extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking#redacted-thinking-blocks) for details.",
               "type": "string"
             },
             "type": {
@@ -4443,9 +4865,11 @@
           "additionalProperties": false,
           "properties": {
             "signature": {
+              "description": "A value used to verify that this thinking block was generated by Claude when it is passed back to the API.\n\nThis is an opaque field and should not be interpreted or parsed. When passing thinking blocks back to the API (required when using tools with extended thinking), pass them back exactly as received, with this field intact.\n\nSee [extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking) for details.",
               "type": "string"
             },
             "thinking": {
+              "description": "The text of Claude's thinking process for this block.",
               "type": "string"
             },
             "type": {
@@ -4468,8 +4892,7 @@
                 {
                   "$ref": "#/definitions/DirectCaller"
                 }
-              ],
-              "description": "Tool invocation directly from the model."
+              ]
             },
             "id": {
               "type": "string"
@@ -4477,6 +4900,13 @@
             "input": {},
             "name": {
               "type": "string"
+            },
+            "toolset_name": {
+              "description": "For a toolset member tool_use, the toolset family.",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "type": {
               "const": "tool_use",
@@ -4610,8 +5040,7 @@
             {
               "$ref": "#/definitions/ToolResultBlockParam"
             }
-          ],
-          "description": "Regular text content."
+          ]
         },
         "DirectCaller": {
           "additionalProperties": false,
@@ -4685,6 +5114,10 @@
             "user_profile_id": {
               "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization. Requires the `user-profiles` beta header.",
               "type": "string"
+            },
+            "workspace_id": {
+              "description": "Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).\n\nOnly needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.",
+              "type": "string"
             }
           },
           "required": [
@@ -4698,8 +5131,7 @@
             {
               "$ref": "#/definitions/Tool"
             }
-          ],
-          "description": "Code execution tool with REPL state persistence (daemon mode + gVisor checkpoint)."
+          ]
         },
         "MessageParam": {
           "additionalProperties": false,
@@ -4739,6 +5171,10 @@
             },
             {
               "enum": [
+                "claude-sonnet-5-5",
+                "claude-fable-5-1",
+                "claude-opus-5-5",
+                "claude-mythos-5-1",
                 "claude-sonnet-5",
                 "claude-fable-5",
                 "claude-mythos-5",
@@ -4753,9 +5189,7 @@
                 "claude-opus-4-5",
                 "claude-opus-4-5-20251101",
                 "claude-sonnet-4-5",
-                "claude-sonnet-4-5-20250929",
-                "claude-opus-4-1",
-                "claude-opus-4-1-20250805"
+                "claude-sonnet-4-5-20250929"
               ],
               "type": "string"
             }
@@ -4766,7 +5200,7 @@
           "additionalProperties": false,
           "properties": {
             "effort": {
-              "description": "All possible effort levels.",
+              "description": "How much effort the model should put into its response. Higher effort levels may result in more thorough analysis but take longer.\n\nValid values are `low`, `medium`, `high`, `xhigh`, or `max`.",
               "enum": [
                 "low",
                 "medium",
@@ -4795,6 +5229,7 @@
           "additionalProperties": false,
           "properties": {
             "data": {
+              "description": "The `data` value of this redacted thinking block, exactly as returned by the API in a previous response. Opaque and encrypted; pass it back unchanged.",
               "type": "string"
             },
             "type": {
@@ -4851,9 +5286,11 @@
           "additionalProperties": false,
           "properties": {
             "signature": {
+              "description": "The `signature` value of this thinking block, exactly as returned by the API in a previous response. Used to verify that the block was generated by Claude.\n\nThinking blocks must be passed back unmodified and in their original order; a modified block results in a 400 `invalid_request_error`.",
               "type": "string"
             },
             "thinking": {
+              "description": "The `thinking` text of this block as returned by the API.",
               "type": "string"
             },
             "type": {
@@ -5013,6 +5450,13 @@
             "tool_use_id": {
               "type": "string"
             },
+            "toolset_name": {
+              "description": "For a toolset member tool_result, the toolset family of the paired tool_use.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "type": {
               "const": "tool_result",
               "type": "string"
@@ -5040,8 +5484,7 @@
                 {
                   "$ref": "#/definitions/DirectCaller"
                 }
-              ],
-              "description": "Tool invocation directly from the model."
+              ]
             },
             "id": {
               "type": "string"
@@ -5049,6 +5492,13 @@
             "input": {},
             "name": {
               "type": "string"
+            },
+            "toolset_name": {
+              "description": "For a toolset member tool_use, the toolset family this member belongs to.",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "type": {
               "const": "tool_use",
@@ -5072,6 +5522,34 @@
         "AnthropicMessageCreateParams": {
           "$ref": "#/definitions/MessageCreateParams"
         },
+        "ContainerParams": {
+          "additionalProperties": false,
+          "description": "Container parameters with skills to be loaded.",
+          "properties": {
+            "id": {
+              "description": "Container id",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "skills": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/definitions/SkillParams"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "List of skills to load in the container"
+            }
+          },
+          "type": "object"
+        },
         "ContentBlockParam": {
           "anyOf": [
             {
@@ -5089,8 +5567,21 @@
             {
               "$ref": "#/definitions/ToolResultBlockParam"
             }
-          ],
-          "description": "Regular text content."
+          ]
+        },
+        "DiagnosticsParam": {
+          "additionalProperties": false,
+          "description": "Request-level diagnostics. Currently carries the previous response id for prompt-cache divergence reporting.",
+          "properties": {
+            "previous_message_id": {
+              "description": "The `id` (`msg_...`) from this client's previous /v1/messages response. The server compares that request's prompt fingerprint against this one and returns `diagnostics.cache_miss_reason` when the prompt-cache prefix could not be reused. Pass `null` on the first turn to opt in without a prior message to compare.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
         },
         "DirectCaller": {
           "additionalProperties": false,
@@ -5116,6 +5607,17 @@
             }
           ]
         },
+        "MessageCreateParamsContainer": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ContainerParams"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Container identifier for reuse across requests."
+        },
         "MessageCreateParamsNonStreaming": {
           "additionalProperties": false,
           "properties": {
@@ -5128,11 +5630,26 @@
               "description": "Body param: Top-level cache control automatically applies a cache_control marker to the last cacheable block in the request."
             },
             "container": {
-              "description": "Body param: Container identifier for reuse across requests.",
-              "type": [
-                "string",
-                "null"
-              ]
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/MessageCreateParamsContainer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Body param: Container identifier for reuse across requests."
+            },
+            "diagnostics": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DiagnosticsParam"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Body param: Request-level diagnostics. Supply `previous_message_id` to have the response include `diagnostics.cache_miss_reason` explaining any prompt-cache divergence from that prior request."
             },
             "inference_geo": {
               "description": "Body param: Specifies the geographic region for inference processing. If not specified, the workspace's `default_inference_geo` is used.",
@@ -5181,7 +5698,7 @@
             },
             "stream": {
               "const": false,
-              "description": "Body param: Whether to incrementally stream the response using server-sent events.\n\nSee [streaming](https://platform.claude.com/docs/en/build-with-claude/streaming) for details.",
+              "description": "Body param: Whether to incrementally stream the response using server-sent events. When `true`, SDKs return a raw event stream.\n\nIn the TypeScript, Python and Ruby SDKs, the recommended way to stream is `messages.stream()`. It sets `stream` for you and accumulates the events into the final message. See [Streaming with SDKs](https://platform.claude.com/docs/en/build-with-claude/streaming#streaming-with-sdks) for an example in each language.",
               "type": "boolean"
             },
             "system": {
@@ -5199,7 +5716,7 @@
               "description": "Body param: System prompt.\n\nA system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role)."
             },
             "temperature": {
-              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not support\nsetting temperature. A value of 1.0 of will be accepted for backwards\ncompatibility, all other values will be rejected with a 400 error.",
+              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not support\nsetting temperature. A value of 1.0 will be accepted for backwards\ncompatibility, all other values will be rejected with a 400 error.",
               "type": "number"
             },
             "thinking": {
@@ -5228,6 +5745,10 @@
             "user_profile_id": {
               "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization. Requires the `user-profiles` beta header.",
               "type": "string"
+            },
+            "workspace_id": {
+              "description": "Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).\n\nOnly needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.",
+              "type": "string"
             }
           },
           "required": [
@@ -5249,11 +5770,26 @@
               "description": "Body param: Top-level cache control automatically applies a cache_control marker to the last cacheable block in the request."
             },
             "container": {
-              "description": "Body param: Container identifier for reuse across requests.",
-              "type": [
-                "string",
-                "null"
-              ]
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/MessageCreateParamsContainer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Body param: Container identifier for reuse across requests."
+            },
+            "diagnostics": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DiagnosticsParam"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Body param: Request-level diagnostics. Supply `previous_message_id` to have the response include `diagnostics.cache_miss_reason` explaining any prompt-cache divergence from that prior request."
             },
             "inference_geo": {
               "description": "Body param: Specifies the geographic region for inference processing. If not specified, the workspace's `default_inference_geo` is used.",
@@ -5302,7 +5838,7 @@
             },
             "stream": {
               "const": true,
-              "description": "Body param: Whether to incrementally stream the response using server-sent events.\n\nSee [streaming](https://platform.claude.com/docs/en/build-with-claude/streaming) for details.",
+              "description": "Body param: Whether to incrementally stream the response using server-sent events. When `true`, SDKs return a raw event stream.\n\nIn the TypeScript, Python and Ruby SDKs, the recommended way to stream is `messages.stream()`. It sets `stream` for you and accumulates the events into the final message. See [Streaming with SDKs](https://platform.claude.com/docs/en/build-with-claude/streaming#streaming-with-sdks) for an example in each language.",
               "type": "boolean"
             },
             "system": {
@@ -5320,7 +5856,7 @@
               "description": "Body param: System prompt.\n\nA system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role)."
             },
             "temperature": {
-              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not support\nsetting temperature. A value of 1.0 of will be accepted for backwards\ncompatibility, all other values will be rejected with a 400 error.",
+              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not support\nsetting temperature. A value of 1.0 will be accepted for backwards\ncompatibility, all other values will be rejected with a 400 error.",
               "type": "number"
             },
             "thinking": {
@@ -5348,6 +5884,10 @@
             },
             "user_profile_id": {
               "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization. Requires the `user-profiles` beta header.",
+              "type": "string"
+            },
+            "workspace_id": {
+              "description": "Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).\n\nOnly needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.",
               "type": "string"
             }
           },
@@ -5410,6 +5950,10 @@
             },
             {
               "enum": [
+                "claude-sonnet-5-5",
+                "claude-fable-5-1",
+                "claude-opus-5-5",
+                "claude-mythos-5-1",
                 "claude-sonnet-5",
                 "claude-fable-5",
                 "claude-mythos-5",
@@ -5424,9 +5968,7 @@
                 "claude-opus-4-5",
                 "claude-opus-4-5-20251101",
                 "claude-sonnet-4-5",
-                "claude-sonnet-4-5-20250929",
-                "claude-opus-4-1",
-                "claude-opus-4-1-20250805"
+                "claude-sonnet-4-5-20250929"
               ],
               "type": "string"
             }
@@ -5437,7 +5979,7 @@
           "additionalProperties": false,
           "properties": {
             "effort": {
-              "description": "All possible effort levels.",
+              "description": "How much effort the model should put into its response. Higher effort levels may result in more thorough analysis but take longer.\n\nValid values are `low`, `medium`, `high`, `xhigh`, or `max`.",
               "enum": [
                 "low",
                 "medium",
@@ -5466,6 +6008,7 @@
           "additionalProperties": false,
           "properties": {
             "data": {
+              "description": "The `data` value of this redacted thinking block, exactly as returned by the API in a previous response. Opaque and encrypted; pass it back unchanged.",
               "type": "string"
             },
             "type": {
@@ -5475,6 +6018,33 @@
           },
           "required": [
             "data",
+            "type"
+          ],
+          "type": "object"
+        },
+        "SkillParams": {
+          "additionalProperties": false,
+          "description": "Specification for a skill to be loaded in a container (request model).",
+          "properties": {
+            "skill_id": {
+              "description": "Skill ID",
+              "type": "string"
+            },
+            "type": {
+              "description": "Type of skill - either 'anthropic' (built-in) or 'custom' (user-defined)",
+              "enum": [
+                "anthropic",
+                "custom"
+              ],
+              "type": "string"
+            },
+            "version": {
+              "description": "Skill version or 'latest' for most recent version",
+              "type": "string"
+            }
+          },
+          "required": [
+            "skill_id",
             "type"
           ],
           "type": "object"
@@ -5522,9 +6092,11 @@
           "additionalProperties": false,
           "properties": {
             "signature": {
+              "description": "The `signature` value of this thinking block, exactly as returned by the API in a previous response. Used to verify that the block was generated by Claude.\n\nThinking blocks must be passed back unmodified and in their original order; a modified block results in a 400 `invalid_request_error`.",
               "type": "string"
             },
             "thinking": {
+              "description": "The `thinking` text of this block as returned by the API.",
               "type": "string"
             },
             "type": {
@@ -5684,6 +6256,13 @@
             "tool_use_id": {
               "type": "string"
             },
+            "toolset_name": {
+              "description": "For a toolset member tool_result, the toolset family of the paired tool_use.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "type": {
               "const": "tool_result",
               "type": "string"
@@ -5700,8 +6279,7 @@
             {
               "$ref": "#/definitions/Tool"
             }
-          ],
-          "description": "Code execution tool with REPL state persistence (daemon mode + gVisor checkpoint)."
+          ]
         },
         "ToolUseBlockParam": {
           "additionalProperties": false,
@@ -5719,8 +6297,7 @@
                 {
                   "$ref": "#/definitions/DirectCaller"
                 }
-              ],
-              "description": "Tool invocation directly from the model."
+              ]
             },
             "id": {
               "type": "string"
@@ -5728,6 +6305,13 @@
             "input": {},
             "name": {
               "type": "string"
+            },
+            "toolset_name": {
+              "description": "For a toolset member tool_use, the toolset family this member belongs to.",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "type": {
               "const": "tool_use",
@@ -5800,7 +6384,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Indicates whether a capability is supported."
+              "description": "Whether the clear_thinking_20251015 strategy is supported."
             },
             "clear_tool_uses_20250919": {
               "anyOf": [
@@ -5811,7 +6395,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Indicates whether a capability is supported."
+              "description": "Whether the clear_tool_uses_20250919 strategy is supported."
             },
             "compact_20260112": {
               "anyOf": [
@@ -5822,7 +6406,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Indicates whether a capability is supported."
+              "description": "Whether the compact_20260112 strategy is supported."
             },
             "supported": {
               "description": "Whether this capability is supported by the model.",
@@ -5870,7 +6454,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Indicates whether a capability is supported."
+              "description": "Whether the model supports xhigh effort level."
             }
           },
           "required": [
@@ -5949,7 +6533,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Model capability information."
+              "description": "Object mapping capability names to their support details. Keys are always present for all known capabilities."
             },
             "created_at": {
               "description": "RFC 3339 datetime string representing the time at which the model was released. May be set to an epoch value if the release date is unknown.",
@@ -6067,6 +6651,8 @@
                 "fast-mode-2026-02-01",
                 "output-300k-2026-03-24",
                 "user-profiles-2026-03-24",
+                "user-profiles-2026-08-18",
+                "user-profiles-2026-09-04",
                 "advisor-tool-2026-03-01",
                 "managed-agents-2026-04-01",
                 "cache-diagnosis-2026-04-07",
@@ -6076,7 +6662,23 @@
                 "server-side-fallback-2026-07-01",
                 "fallback-credit-2026-06-01",
                 "fallback-credit-2026-07-01",
-                "agent-memory-2026-07-22"
+                "agent-memory-2026-07-22",
+                "mid-conversation-tool-changes-2026-07-01",
+                "compact-2026-01-12",
+                "computer-use-2025-11-24",
+                "mcp-tunnels-2026-06-22",
+                "structured-outputs-2025-11-13",
+                "task-budgets-2026-03-13",
+                "thinking-display-updates-2026-08-18",
+                "ce-user-management-2026-07-13",
+                "mid-conversation-output-config-2026-07-01",
+                "thinking-binding-controls-2026-08-01",
+                "mid-conversation-system-clear-at-2026-08-21",
+                "compact-2026-09-04",
+                "inline-tools-2026-09-15",
+                "mcp-client-2026-09-15",
+                "ce-plugins-2026-09-01",
+                "spend-limit-reads-2026-09-26"
               ],
               "type": "string"
             }
@@ -6095,7 +6697,7 @@
               "type": "string"
             },
             "betas": {
-              "description": "Header param: Optional header to specify the beta version(s) you want to use.",
+              "deprecated": "Deprecated. This parameter will be removed from this method in a\nfuture release. To use beta features, call the beta models methods\n(`client.beta.models`) instead.",
               "items": {
                 "$ref": "#/definitions/AnthropicBeta"
               },
@@ -6104,6 +6706,10 @@
             "limit": {
               "description": "Number of items per page.",
               "type": "number"
+            },
+            "workspace_id": {
+              "description": "Header param: Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).\n\nOnly needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.",
+              "type": "string"
             }
           },
           "type": "object"
@@ -6143,6 +6749,8 @@
                 "fast-mode-2026-02-01",
                 "output-300k-2026-03-24",
                 "user-profiles-2026-03-24",
+                "user-profiles-2026-08-18",
+                "user-profiles-2026-09-04",
                 "advisor-tool-2026-03-01",
                 "managed-agents-2026-04-01",
                 "cache-diagnosis-2026-04-07",
@@ -6152,7 +6760,23 @@
                 "server-side-fallback-2026-07-01",
                 "fallback-credit-2026-06-01",
                 "fallback-credit-2026-07-01",
-                "agent-memory-2026-07-22"
+                "agent-memory-2026-07-22",
+                "mid-conversation-tool-changes-2026-07-01",
+                "compact-2026-01-12",
+                "computer-use-2025-11-24",
+                "mcp-tunnels-2026-06-22",
+                "structured-outputs-2025-11-13",
+                "task-budgets-2026-03-13",
+                "thinking-display-updates-2026-08-18",
+                "ce-user-management-2026-07-13",
+                "mid-conversation-output-config-2026-07-01",
+                "thinking-binding-controls-2026-08-01",
+                "mid-conversation-system-clear-at-2026-08-21",
+                "compact-2026-09-04",
+                "inline-tools-2026-09-15",
+                "mcp-client-2026-09-15",
+                "ce-plugins-2026-09-01",
+                "spend-limit-reads-2026-09-26"
               ],
               "type": "string"
             }
@@ -6165,11 +6789,15 @@
           "additionalProperties": false,
           "properties": {
             "betas": {
-              "description": "Optional header to specify the beta version(s) you want to use.",
+              "deprecated": "Deprecated. This parameter will be removed from this method in a\nfuture release. To use beta features, call the beta models methods\n(`client.beta.models`) instead.",
               "items": {
                 "$ref": "#/definitions/AnthropicBeta"
               },
               "type": "array"
+            },
+            "workspace_id": {
+              "description": "Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).\n\nOnly needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.",
+              "type": "string"
             }
           },
           "type": "object"
@@ -6201,6 +6829,7 @@
           ],
           "type": "object"
         },
+        "CacheMissReason": false,
         "Container": {
           "additionalProperties": false,
           "description": "Information about the container used in the request (for the code execution tool)",
@@ -6212,11 +6841,54 @@
             "id": {
               "description": "Identifier for the container used in this request",
               "type": "string"
+            },
+            "skills": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/definitions/ContainerSkill"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Skills loaded in the container"
             }
           },
           "required": [
             "id",
-            "expires_at"
+            "expires_at",
+            "skills"
+          ],
+          "type": "object"
+        },
+        "ContainerSkill": {
+          "additionalProperties": false,
+          "description": "A skill that was loaded in a container (response model).",
+          "properties": {
+            "skill_id": {
+              "description": "Skill ID",
+              "type": "string"
+            },
+            "type": {
+              "description": "Type of skill - either 'anthropic' (built-in) or 'custom' (user-defined)",
+              "enum": [
+                "anthropic",
+                "custom"
+              ],
+              "type": "string"
+            },
+            "version": {
+              "description": "The resolved version: a skill version ID for custom skills.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "skill_id",
+            "type",
+            "version"
           ],
           "type": "object"
         },
@@ -6234,8 +6906,28 @@
             {
               "$ref": "#/definitions/ToolUseBlock"
             }
+          ]
+        },
+        "Diagnostics": {
+          "additionalProperties": false,
+          "description": "Request-level diagnostics: why the prompt cache could not fully reuse the prefix of the request named by `diagnostics.previous_message_id`.",
+          "properties": {
+            "cache_miss_reason": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/CacheMissReason"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Explains why the prompt cache could not fully reuse the prefix from the request identified by `diagnostics.previous_message_id`. `null` means diagnosis is still pending — the response was serialized before the background comparison completed."
+            }
+          },
+          "required": [
+            "cache_miss_reason"
           ],
-          "description": "Response model for a file uploaded to the container."
+          "type": "object"
         },
         "DirectCaller": {
           "additionalProperties": false,
@@ -6280,7 +6972,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Information about the container used in the request (for the code execution tool)"
+              "description": "Information about the container used in this request.\n\nThis will be non-null if a container tool (e.g. code execution) was used."
             },
             "content": {
               "description": "Content generated by the model.\n\nThis is an array of content blocks, each of which has a `type` that determines its shape.\n\nExample:\n\n```json [{ \"type\": \"text\", \"text\": \"Hi, I'm Claude.\" }] ```\n\nIf the request input `messages` ended with an `assistant` turn, then the response `content` will continue directly from that last turn. You can use this to constrain the model's output.\n\nFor example, if the input `messages` were:\n\n```json [   {     \"role\": \"user\",     \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"   },   { \"role\": \"assistant\", \"content\": \"The best answer is (\" } ] ```\n\nThen the response `content` might be:\n\n```json [{ \"type\": \"text\", \"text\": \"B)\" }] ```",
@@ -6288,6 +6980,17 @@
                 "$ref": "#/definitions/ContentBlock"
               },
               "type": "array"
+            },
+            "diagnostics": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Diagnostics"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Request-level diagnostics. `null` when the request did not supply `diagnostics`, or when it did and no prompt-cache divergence was detected."
             },
             "id": {
               "description": "Unique object identifier.\n\nThe format and length of IDs may change over time.",
@@ -6308,7 +7011,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Structured information about a refusal."
+              "description": "Structured information about why model output stopped.\n\nThis is `null` when the `stop_reason` has no additional detail to report."
             },
             "stop_reason": {
               "anyOf": [
@@ -6342,6 +7045,7 @@
             "id",
             "container",
             "content",
+            "diagnostics",
             "model",
             "role",
             "stop_details",
@@ -6420,6 +7124,10 @@
             },
             {
               "enum": [
+                "claude-sonnet-5-5",
+                "claude-fable-5-1",
+                "claude-opus-5-5",
+                "claude-mythos-5-1",
                 "claude-sonnet-5",
                 "claude-fable-5",
                 "claude-mythos-5",
@@ -6434,9 +7142,7 @@
                 "claude-opus-4-5",
                 "claude-opus-4-5-20251101",
                 "claude-sonnet-4-5",
-                "claude-sonnet-4-5-20250929",
-                "claude-opus-4-1",
-                "claude-opus-4-1-20250805"
+                "claude-sonnet-4-5-20250929"
               ],
               "type": "string"
             }
@@ -6510,8 +7216,7 @@
                 {
                   "$ref": "#/definitions/ToolUseBlock"
                 }
-              ],
-              "description": "Response model for a file uploaded to the container."
+              ]
             },
             "index": {
               "type": "number"
@@ -6579,7 +7284,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Information about the container used in the request (for the code execution tool)"
+              "description": "Information about the container used in this request.\n\nThis will be non-null if a container tool (e.g. code execution) was used."
             },
             "stop_details": {
               "anyOf": [
@@ -6587,7 +7292,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Structured information about a refusal."
+              "description": "Structured information about why model output stopped.\n\nThis is `null` when the `stop_reason` has no additional detail to report."
             },
             "stop_reason": {
               "anyOf": [
@@ -6670,6 +7375,7 @@
           "additionalProperties": false,
           "properties": {
             "data": {
+              "description": "The contents of this redacted thinking block, returned when portions of the model's thinking were safety-redacted. This field is opaque and encrypted, with no readable content.\n\nPass `redacted_thinking` blocks back to the API unchanged when continuing a multi-turn conversation.\n\nSee [extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking#redacted-thinking-blocks) for details.",
               "type": "string"
             },
             "type": {
@@ -6705,6 +7411,7 @@
           "additionalProperties": false,
           "properties": {
             "signature": {
+              "description": "The `signature` for this thinking block: an opaque value used to verify that the block was generated by Claude when it is passed back to the API. Delivered in a `signature_delta` event just before the block's `content_block_stop` event.",
               "type": "string"
             },
             "type": {
@@ -6784,9 +7491,11 @@
           "additionalProperties": false,
           "properties": {
             "signature": {
+              "description": "A value used to verify that this thinking block was generated by Claude when it is passed back to the API.\n\nThis is an opaque field and should not be interpreted or parsed. When passing thinking blocks back to the API (required when using tools with extended thinking), pass them back exactly as received, with this field intact.\n\nSee [extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking) for details.",
               "type": "string"
             },
             "thinking": {
+              "description": "The text of Claude's thinking process for this block.",
               "type": "string"
             },
             "type": {
@@ -6805,6 +7514,7 @@
           "additionalProperties": false,
           "properties": {
             "thinking": {
+              "description": "The incremental `thinking` text for this content block. Concatenate the `thinking` values of successive `thinking_delta` events to assemble the block's full `thinking` value.",
               "type": "string"
             },
             "type": {
@@ -6826,8 +7536,7 @@
                 {
                   "$ref": "#/definitions/DirectCaller"
                 }
-              ],
-              "description": "Tool invocation directly from the model."
+              ]
             },
             "id": {
               "type": "string"
@@ -6835,6 +7544,13 @@
             "input": {},
             "name": {
               "type": "string"
+            },
+            "toolset_name": {
+              "description": "For a toolset member tool_use, the toolset family.",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "type": {
               "const": "tool_use",

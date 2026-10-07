@@ -43,7 +43,7 @@ export class OpenAiResourceStore {
       case 'delete_response': {
         const id = responseId(operation)
         this.delete(id)
-        return { id, object: 'response', deleted: true }
+        return { id, object: 'response.deleted', deleted: true }
       }
       case 'list_input_items':
         return this.listInputItems(
