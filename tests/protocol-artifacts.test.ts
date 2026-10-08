@@ -178,12 +178,15 @@ describe('protocol profile and operation registry', () => {
     expect(anthropicManifest.transitionCorpusSha256).toBe(sha256(anthropicTransitions))
 
     const lock = parse(lockText) as LockFile
-    expect(anthropicManifest.packageIntegrity).toBe(
-      lock.packages?.['@anthropic-ai/sdk@0.131.0']?.resolution?.integrity,
-    )
-    // The standalone package pins the same SDK alias used to generate the snapshot.
+    const sdkVersion = anthropicManifest.sdkVersion
+    const integrity = lock.packages?.[`@anthropic-ai/sdk@${sdkVersion}`]?.resolution?.integrity
+    // Never treat two undefined integrities as a passing provenance check.
+    expect(integrity).toMatch(/^sha512-/)
+    expect(anthropicManifest.packageIntegrity).toBe(integrity)
+
+    // Snapshot, installed package alias and lockfile must pin one exact version.
     const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
-    expect(pkg.devDependencies['anthropic-sdk']).toBe('npm:@anthropic-ai/sdk@0.131.0')
+    expect(pkg.devDependencies['anthropic-sdk']).toBe(`npm:@anthropic-ai/sdk@${sdkVersion}`)
 
   })
 })

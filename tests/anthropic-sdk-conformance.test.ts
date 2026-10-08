@@ -1,8 +1,36 @@
 import Anthropic from 'anthropic-sdk'
 import { describe, expect, it } from 'vitest'
 
+import anthropicSchema from '../protocol/anthropic/schema.json'
+
 import type { ModelApiSimulator, SimulatorExchange } from '../src'
 import { startModelApiSimulator } from '../src'
+
+
+/**
+ * Keep the model fixture explicit, but select the known lifecycle metadata by
+ * the checked-in schema rather than a hard-coded SDK version. Older snapshots
+ * forbid those fields via additionalProperties: false; newer ones require them.
+ * New *unknown* required properties still fail the completeness assertion.
+ */
+const modelSchema = anthropicSchema.catalogues.AnthropicModelInfo.definitions.ModelInfo
+const modelInfo = {
+  id: 'claude-test',
+  type: 'model',
+  display_name: 'Claude Test',
+  created_at: '2026-01-01T00:00:00Z',
+  capabilities: null,
+  max_input_tokens: null,
+  max_tokens: null,
+  ...(Object.hasOwn(modelSchema.properties, 'lifecycle')
+    ? {
+        deprecated_at: null,
+        lifecycle: 'active',
+        line: null,
+        retires_at: null,
+      }
+    : {}),
+} as const
 
 const message = {
   id: 'msg_simulator',
@@ -109,6 +137,8 @@ describe('anthropic official SDK conformance', () => {
   it(
     'supports non-streaming, raw/final streams, token counts, models, and beta fields',
     async () => {
+      // Do not let a new required SDK field silently fall out of the fixture.
+      expect(Object.keys(modelInfo).sort()).toEqual([...modelSchema.required].sort())
       const simulator = await startModelApiSimulator()
       const urls: string[] = []
       simulator.controller.enqueue({
@@ -124,17 +154,7 @@ describe('anthropic official SDK conformance', () => {
           exchange('models', 'GET', '/v1/models', {
             kind: 'json',
             body: {
-              data: [
-                {
-                  id: 'claude-test',
-                  type: 'model',
-                  display_name: 'Claude Test',
-                  created_at: '2026-01-01T00:00:00Z',
-                  capabilities: null,
-                  max_input_tokens: null,
-                  max_tokens: null,
-                },
-              ],
+              data: [modelInfo],
               has_more: false,
               first_id: 'claude-test',
               last_id: 'claude-test',
@@ -142,15 +162,7 @@ describe('anthropic official SDK conformance', () => {
           }),
           exchange('model', 'GET', '/v1/models/claude-test', {
             kind: 'json',
-            body: {
-              id: 'claude-test',
-              type: 'model',
-              display_name: 'Claude Test',
-              created_at: '2026-01-01T00:00:00Z',
-              capabilities: null,
-              max_input_tokens: null,
-              max_tokens: null,
-            },
+            body: modelInfo,
           }),
           exchange('beta', 'POST', '/v1/messages', { kind: 'json', body: betaMessage }),
         ],
@@ -189,8 +201,8 @@ describe('anthropic official SDK conformance', () => {
           }),
         ).toEqual({ input_tokens: 3 })
         const models = await client.models.list()
-        expect(models.data[0]?.id).toBe('claude-test')
-        expect((await client.models.retrieve('claude-test')).id).toBe('claude-test')
+        expect(models.data[0]).toMatchObject(modelInfo)
+        expect(await client.models.retrieve('claude-test')).toMatchObject(modelInfo)
         expect(
           (
             await client.beta.messages.create({
