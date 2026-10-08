@@ -1,8 +1,10 @@
 {
-  "coreScopeSha256": "c4e6bef1a6bf6c9f61774e1ebc348af50c5120c271fc96edeb5320bfe2b5a9be",
-  "generatedAt": "2026-10-07T15:48:21.179Z",
+  "chatGrammarSha256": "7daaa5528a6899b9859d7104c6a20541c92c48ef2210d3e8613938dae3d5f2be",
+  "chatTransitionCorpusSha256": "cb8bd61a569c9ba0f0188dd770f8b1beb1fa5e33e7ee222699cc50b15ad172e7",
+  "coreScopeSha256": "770fafed6305715dae6907509506ea976e1897a5dbd282b1500d399fbe6c5893",
+  "generatedAt": "2026-10-08T08:51:33.617Z",
   "grammarSha256": "7377c56bc4c2fde95709e1c2e33388635a53f0b573d4838b88673f7d578ab6b8",
-  "normalizedSha256": "9d36a2ee851e834329ad25bcb24e878b7aaf7f28f85809dc1ca1c09ab54221f2",
+  "normalizedSha256": "4938c3ee4ffaeba1ff1b1af9d42652c486764486374b6a0a4fe5c39d9b739eec",
   "openapiVersion": "3.1.0",
   "owner": "@cradle/model-api-simulator",
   "provider": "openai",

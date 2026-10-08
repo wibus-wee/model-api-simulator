@@ -43,6 +43,7 @@ describe('protocol profile and operation registry', () => {
     const cases = [
       ['openai', 'GET', '/v1/models', 'listModels'],
       ['openai', 'GET', '/v1/models/gpt-test', 'retrieveModel'],
+      ['openai', 'POST', '/v1/chat/completions', 'createChatCompletion'],
       ['openai', 'POST', '/v1/responses', 'createResponse'],
       ['openai', 'POST', '/v1/responses?beta=true', 'beta_createResponse'],
       ['openai', 'GET', '/v1/responses/resp_1', 'getResponse'],
@@ -165,6 +166,8 @@ describe('protocol profile and operation registry', () => {
       readFile(new URL('../pnpm-lock.yaml', import.meta.url), 'utf8'),
     ])
 
+    expect(openAiManifest.chatGrammarSha256).toBe(sha256(await readFile(new URL('../protocol/openai/chat-stream-grammar.json', import.meta.url))))
+    expect(openAiManifest.chatTransitionCorpusSha256).toBe(sha256(await readFile(new URL('../protocol/openai/chat-transition-corpus.json', import.meta.url))))
     expect(openAiManifest.coreScopeSha256).toBe(sha256(coreScope))
     expect(openAiManifest.normalizedSha256).toBe(sha256(openAiSnapshot))
     expect(openAiManifest.grammarSha256).toBe(sha256(openAiGrammar))

@@ -3,7 +3,7 @@
 Extracted from [Cradle](https://github.com/wibus-wee/cradle-app), with love.
 
 Deterministic loopback simulator for the core Anthropic Messages and OpenAI
-Responses wire protocols. It is intended for tests that must exercise the real
+Responses and Chat Completions wire protocols. It is intended for tests that must exercise the real
 official SDK scheduling, streaming, and accumulation logic without contacting
 an upstream model API.
 
@@ -24,11 +24,15 @@ The package supports:
 - OpenAI text, refusal, reasoning, ordinary function call, lifecycle, error,
   and disconnect flows.
 
+- OpenAI Chat Completions create (JSON and SSE), parallel choices, text/refusal,
+  function-tool deltas and tool-return requests, usage-only final chunks, literal
+  `[DONE]`, stream errors, cancellation, and disconnects.
+
 The sole allowlist is [`protocol/core-scope.json`](./protocol/core-scope.json).
 MCP, web/file search, citations and annotations, image/audio generation,
 computer use, shell, code interpreter/execution, custom tools, and
 provider-hosted server tools are deliberately excluded. Other API families,
-including Chat Completions, Realtime, Assistants, Anthropic batches, and cloud
+including Realtime, Assistants, Anthropic batches, and cloud
 provider dialects, are also outside this package.
 
 ## Anthropic SDK quick start
@@ -323,3 +327,27 @@ Extracted from `packages/model-api-simulator` in Cradle commit [`03cdaf6eea042f9
 - The core allowlist and stream grammar are unchanged. Generated schemas retain new fields within that profile.
 - Existing scenarios must include `diagnostics: null` in Anthropic messages and `access_programs: null` in OpenAI responses when no value applies. OpenAI delete responses now use `object: 'response.deleted'` with `id` and `deleted`.
 - Witness generation supports string-only `not: { pattern: ... }` constraints, filtering candidates against the forbidden pattern. Other unsupported negation still fails explicitly. Positive witnesses and negative mutations are independently revalidated with AJV.
+
+## Chat Completions provenance and boundary
+
+`POST /v1/chat/completions` consumes the same `openai` scenario queue as Responses;
+match the path explicitly. A stream uses ordinary event steps for chunk objects
+and `{ kind: 'event', event: '[DONE]' }` for the literal terminal frame. Use
+`disconnect` to model interruption, not a clean `close` without `[DONE]`.
+
+The request, JSON response, successful chunk, and error-envelope schemas come
+from the same pinned upstream OpenAPI commit as Responses, not handwritten
+lookalikes. `protocol/openai/MANIFEST.json` binds the upstream source hash,
+normalized schema hash, scope, both stream grammars, and both transition corpora.
+Refresh with the manifest's command, then run `protocol:generate` and `check`.
+Changing shared scope also requires `protocol:refresh:anthropic` so its manifest
+continues to describe the exact checked-in profile.
+
+The Chat Completions state profile covers text and function tools; streamed
+audio expiry updates and moderation-only chunks are not certified by it. It
+checks stable completion identity, per-choice completion, per-choice/tool-index
+call IDs, final usage ordering, and terminal boundaries. Tool argument fragments
+are preserved even when they are not valid JSON, as permitted by the upstream
+contract. Official OpenAI SDK tests cover actual HTTP/SSE parsing and tool
+roundtrips in addition to schema-generated witnesses. This is protocol
+compatibility evidence, not an assessment of a model's intelligence.

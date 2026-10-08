@@ -1,0 +1,171 @@
+{
+  "scenarios": [
+    {
+      "id": "parallel-choices-tools-usage",
+      "steps": [
+        {
+          "kind": "event",
+          "event": {
+            "id": "chatcmpl_fixture",
+            "object": "chat.completion.chunk",
+            "model": "gpt-test",
+            "created": 1,
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "role": "assistant",
+                  "content": "hello"
+                },
+                "finish_reason": null
+              },
+              {
+                "index": 1,
+                "delta": {
+                  "refusal": "No"
+                },
+                "finish_reason": null
+              }
+            ]
+          }
+        },
+        {
+          "kind": "event",
+          "event": {
+            "id": "chatcmpl_fixture",
+            "object": "chat.completion.chunk",
+            "model": "gpt-test",
+            "created": 1,
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "tool_calls": [
+                    {
+                      "index": 0,
+                      "id": "call_0",
+                      "type": "function",
+                      "function": {
+                        "name": "read",
+                        "arguments": "{"
+                      }
+                    }
+                  ]
+                },
+                "finish_reason": null
+              },
+              {
+                "index": 1,
+                "delta": {
+                  "function_call": {
+                    "name": "legacy",
+                    "arguments": "{}"
+                  }
+                },
+                "finish_reason": null
+              }
+            ]
+          }
+        },
+        {
+          "kind": "event",
+          "event": {
+            "id": "chatcmpl_fixture",
+            "object": "chat.completion.chunk",
+            "model": "gpt-test",
+            "created": 1,
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "tool_calls": [
+                    {
+                      "index": 0,
+                      "function": {
+                        "arguments": "\"path\":\"README.md\"}"
+                      }
+                    }
+                  ]
+                },
+                "finish_reason": "tool_calls"
+              },
+              {
+                "index": 1,
+                "delta": {},
+                "finish_reason": "stop"
+              }
+            ]
+          }
+        },
+        {
+          "kind": "event",
+          "event": {
+            "id": "chatcmpl_fixture",
+            "object": "chat.completion.chunk",
+            "model": "gpt-test",
+            "created": 1,
+            "choices": [],
+            "usage": {
+              "prompt_tokens": 1,
+              "completion_tokens": 2,
+              "total_tokens": 3
+            }
+          }
+        },
+        {
+          "kind": "event",
+          "event": "[DONE]"
+        },
+        {
+          "kind": "close"
+        }
+      ]
+    },
+    {
+      "id": "error",
+      "steps": [
+        {
+          "kind": "event",
+          "event": {
+            "error": {
+              "message": "synthetic failure",
+              "type": "server_error",
+              "param": null,
+              "code": null
+            }
+          }
+        },
+        {
+          "kind": "close"
+        }
+      ]
+    },
+    {
+      "id": "interruption",
+      "steps": [
+        {
+          "kind": "event",
+          "event": {
+            "id": "chatcmpl_fixture",
+            "object": "chat.completion.chunk",
+            "model": "gpt-test",
+            "created": 1,
+            "choices": [
+              {
+                "index": 0,
+                "delta": {
+                  "content": "partial"
+                },
+                "finish_reason": null
+              }
+            ]
+          }
+        },
+        {
+          "kind": "disconnect",
+          "reason": "synthetic interruption"
+        }
+      ]
+    }
+  ]
+}
