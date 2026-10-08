@@ -14,10 +14,11 @@ const BASE = {
   openaiSdk: '7.30.0',
 }
 const passing = {
-  'repository-check': 'passed',
-  'consumer-claude': 'passed',
-  'consumer-codex': 'passed',
-  'consumer-kimi': 'passed',
+  typecheck: 'passed',
+  'simulator-tests': 'passed',
+  'protocol-check': 'passed',
+  'coverage-check': 'passed',
+  build: 'passed',
 }
 
 describe('protocol evolution eligibility', () => {
@@ -79,7 +80,7 @@ describe('protocol evolution eligibility', () => {
       gates: passing,
     }
     expect(assessPromotion(input).verdict).toBe('safe')
-    expect(assessPromotion({ ...input, gates: { ...passing, 'consumer-codex': 'missing' } }).verdict).toBe('blocked')
+    expect(assessPromotion({ ...input, gates: { ...passing, 'simulator-tests': 'missing' } }).verdict).toBe('blocked')
     expect(assessPromotion({ ...input, rawDiscriminators: { added: ['response.new'], removed: [] } }).verdict).toBe('review')
     expect(assessPromotion({ ...input, schema: { safe: [], review: [{ path: '/required' }] } }).verdict).toBe('review')
     expect(assessPromotion({ ...input, invariantChanges: ['protocol/core-scope.json'] }).verdict).toBe('blocked')
