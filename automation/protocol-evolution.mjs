@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const ROOT = resolve(import.meta.dirname, '..')
-const REQUIRED_GATES = ['repository-check', 'consumer-claude', 'consumer-codex', 'consumer-kimi']
+const REQUIRED_GATES = ['typecheck', 'simulator-tests', 'protocol-check', 'coverage-check', 'build']
 const INVARIANT_FILES = [
   'protocol/core-scope.json',
   'protocol/openai/stream-grammar.json',
@@ -357,7 +357,7 @@ async function evaluate() {
     '',
     ...REQUIRED_GATES.map(key => `- ${key}: **${gates[key] ?? 'missing'}**`),
     '',
-    'The repository gate executes official SDK conformance, schema witness/negative-mutation coverage, deterministic stream transitions, historical fixtures, typechecking and build. Consumer gates run actual pinned Claude, Codex and Kimi CLIs against the candidate simulator and Huihua native-store checks.',
+    'These are simulator-owned checks: TypeScript typecheck; the complete Vitest suite (official OpenAI/Anthropic SDK conformance, streams/state machines, wire routes and curated fixtures); protocol manifest consistency; schema/transition coverage with positive and negative witnesses; and package build. All five gates must independently pass.',
     '',
     '### Semantic delta (normalized core)',
     '',
@@ -384,7 +384,7 @@ async function evaluate() {
     '- Protocol scope and stream grammars are immutable in this automated refresh.',
     '- New union branches, enum values, required fields, stream events and changed declarations are never auto-accepted just because the refreshed schema generated passing witnesses.',
     '- Safe means eligible for optional automatic promotion after every recorded gate passed; review means a PR stays open for human assessment.',
-    '- No real upstream model generation is exercised here. Compatibility is verified against official SDKs and independently recorded producer journeys.',
+    '- This repository only evaluates its own protocol snapshots, SDK compatibility, simulator runtime and checked-in fixtures. No external application or producer repository is required. No live model intelligence is assessed.',
     '',
   ].join('\n')
   await put(reportPath, report)
