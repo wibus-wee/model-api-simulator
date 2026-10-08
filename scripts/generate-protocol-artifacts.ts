@@ -5,6 +5,9 @@ import { pathToFileURL } from 'node:url'
 import anthropicGrammar from '../protocol/anthropic/stream-grammar.json'
 import anthropicTransitions from '../protocol/anthropic/transition-corpus.json'
 import scope from '../protocol/core-scope.json'
+import chatGrammar from '../protocol/openai/chat-stream-grammar.json'
+import chatTransitions from '../protocol/openai/chat-transition-corpus.json'
+import { validateChatCompletionStream } from '../src/openai/chat-state-machine'
 import openAiGrammar from '../protocol/openai/stream-grammar.json'
 import openAiTransitions from '../protocol/openai/transition-corpus.json'
 import { validateAnthropicStream } from '../src/anthropic/state-machine'
@@ -49,6 +52,8 @@ export async function generateProtocolArtifacts(outputDirectory: string): Promis
     ...anthropicGrammar.correlations.map(item => `anthropic:correlation:${item.id}`),
     ...openAiGrammar.transitions.map(item => `openai:transition:${item.id}`),
     ...openAiGrammar.correlations.map(item => `openai:correlation:${item.id}`),
+    ...chatGrammar.transitions.map(item => `openai:chat:transition:${item.id}`),
+    ...chatGrammar.correlations.map(item => `openai:chat:correlation:${item.id}`),
   ].sort()
   const coveredTransitions = new Set<string>()
   for (const scenario of anthropicTransitions.scenarios) {
@@ -62,6 +67,11 @@ export async function generateProtocolArtifacts(outputDirectory: string): Promis
     trace.transitions.forEach(id => coveredTransitions.add(id))
     trace.correlations.forEach(id =>
       coveredTransitions.add(`openai:correlation:${id}`))
+  }
+  for (const scenario of chatTransitions.scenarios) {
+    const trace = validateChatCompletionStream(scenario.steps as readonly StreamStep[])
+    trace.transitions.forEach(id => coveredTransitions.add(id))
+    trace.correlations.forEach(id => coveredTransitions.add(`openai:chat:correlation:${id}`))
   }
   const registry = new JsonSchemaRegistry()
   const witnesses: Json[] = []

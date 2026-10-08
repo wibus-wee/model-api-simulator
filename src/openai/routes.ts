@@ -13,7 +13,8 @@ import type { OpenAiResourceStore } from './resource-store'
 import {
   OpenAiResourceNotFoundError,
 } from './resource-store'
-import { encodeOpenAiEvent } from './sse'
+import { validateChatCompletionStream } from './chat-state-machine'
+import { encodeChatCompletionEvent, encodeOpenAiEvent } from './sse'
 import { validateOpenAiStream } from './state-machine'
 
 export function openAiRoutes(
@@ -23,6 +24,8 @@ export function openAiRoutes(
   autoRespond: AutoRespondMode = false,
 ) {
   return new Elysia({ name: 'cradle.model-api-simulator.openai' })
+    .post('/v1/chat/completions', ({ request }) =>
+      handleOpenAiRequest(controller, protocol, resources, request, autoRespond))
     .post('/v1/responses', ({ request }) =>
       handleOpenAiRequest(controller, protocol, resources, request, autoRespond))
     .get('/v1/responses/:response_id', ({ request }) =>
@@ -87,12 +90,14 @@ export async function handleOpenAiRequest(
       resources.apply(exchange.resourceEffect, operation, request, exchange.resourceEffect.response)
     }
     protocol.validateStream(operation, exchange.response.steps)
-    validateOpenAiStream(exchange.response.steps)
+    const chat = operation.id === 'createChatCompletion'
+    if (chat) { validateChatCompletionStream(exchange.response.steps) }
+    else { validateOpenAiStream(exchange.response.steps) }
     headers.set('content-type', 'text/event-stream')
     headers.set('cache-control', 'no-cache')
     return new Response(
       createScheduledStream(controller, exchange.response.steps, step =>
-        encodeOpenAiEvent(step.event)),
+        chat ? encodeChatCompletionEvent(step.event) : encodeOpenAiEvent(step.event)),
       { status: exchange.response.status ?? 200, headers },
     )
   }

@@ -1,5 +1,5 @@
 {
-  "coreScopeSha256": "c4e6bef1a6bf6c9f61774e1ebc348af50c5120c271fc96edeb5320bfe2b5a9be",
+  "coreScopeSha256": "770fafed6305715dae6907509506ea976e1897a5dbd282b1500d399fbe6c5893",
   "declarations": [
     {
       "path": "resources/messages/messages.d.ts",
@@ -22,7 +22,7 @@
       "sha256": "35bb89d99e5aeddfe256470bf2255b0b1435ae2493eb4c07a8e5fb10ac14d3fb"
     }
   ],
-  "generatedAt": "2026-10-07T15:48:47.470Z",
+  "generatedAt": "2026-10-08T08:52:47.333Z",
   "grammarSha256": "ebdd034edaee848ac357124935db45a1c87c4473b41de1ab0f223c265c2dfea5",
   "owner": "@cradle/model-api-simulator",
   "packageIntegrity": "sha512-9+PepoU7qVMmM70jSahdnfcMHAvAnzhMOLv2W9WjRLO+OG/MAiBETkwKZqv7KIJ1Cj5h8eZ019bHzZaq+Mbepw==",

@@ -77,6 +77,8 @@ async function main(): Promise<void> {
     coreScopeSha256: sha256(coreScopeText),
     grammarSha256: sha256(grammarText),
     transitionCorpusSha256: sha256(transitionCorpusText),
+    chatGrammarSha256: sha256(await readFile(resolve(ROOT, 'protocol/openai/chat-stream-grammar.json'))),
+    chatTransitionCorpusSha256: sha256(await readFile(resolve(ROOT, 'protocol/openai/chat-transition-corpus.json'))),
     generatedAt: new Date().toISOString(),
     refreshCommand: `pnpm protocol:refresh:openai --ref ${ref}`,
   })

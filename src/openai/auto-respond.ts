@@ -2,7 +2,7 @@ import type { JsonObject, JsonValue, ObservedRequest, StreamStep } from '../cont
 import { isJsonArray, isJsonObject } from '../contract'
 import type { ScenarioController } from '../core/scenario-runtime'
 import { createScheduledStream } from '../core/stream-scheduler'
-import { encodeOpenAiEvent } from './sse'
+import { encodeChatCompletionEvent, encodeOpenAiEvent } from './sse'
 
 const FALLBACK_MODEL = 'gpt-test'
 
@@ -29,6 +29,32 @@ export function autoOpenAiResponse(
       },
       { headers: { 'x-request-id': 'req_simulator_auto' } },
     )
+  }
+
+  if (method === 'POST' && observed.path === '/v1/chat/completions') {
+    const model = typeof body.model === 'string' ? body.model : FALLBACK_MODEL
+    const base = { id: `chatcmpl_auto_${controller.requests().length}`, created: 1, model }
+    const text = 'Synthetic simulator reply.'
+    const usage = { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+    if (body.stream === true) {
+      const chunk = (choices: JsonValue[], extra: JsonObject = {}): StreamStep => ({
+        kind: 'event', event: { ...base, object: 'chat.completion.chunk', choices, ...extra },
+      })
+      const steps: StreamStep[] = [
+        chunk([{ index: 0, delta: { role: 'assistant', content: text }, finish_reason: null }]),
+        chunk([{ index: 0, delta: {}, finish_reason: 'stop' }]),
+      ]
+      if (isJsonObject(body.stream_options) && body.stream_options.include_usage === true) {
+        steps.push(chunk([], { usage }))
+      }
+      steps.push({ kind: 'event', event: '[DONE]' }, { kind: 'close' })
+      return new Response(createScheduledStream(controller, steps, step => encodeChatCompletionEvent(step.event)), {
+        headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', 'x-request-id': 'req_simulator_auto' },
+      })
+    }
+    return Response.json({ ...base, object: 'chat.completion', usage,
+      choices: [{ index: 0, message: { role: 'assistant', content: text, refusal: null }, finish_reason: 'stop', logprobs: null }],
+    }, { headers: { 'x-request-id': 'req_simulator_auto' } })
   }
 
   if (method === 'POST' && observed.path === '/v1/responses') {

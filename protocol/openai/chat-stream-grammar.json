@@ -1,0 +1,73 @@
+{
+  "provider": "openai",
+  "operation": "createChatCompletion",
+  "profile": "text, refusal, function tools, legacy function deltas, usage and interruptions; audio and moderation chunks excluded",
+  "transitions": [
+    {
+      "id": "chunk",
+      "evidence": "upstream:https://github.com/openai/openai-openapi/blob/ee483b4b26b2695fedc5c8af7b187e5986bd0add/openapi.json#/paths/~1chat~1completions"
+    },
+    {
+      "id": "text",
+      "evidence": "upstream:https://github.com/openai/openai-openapi/blob/ee483b4b26b2695fedc5c8af7b187e5986bd0add/openapi.json#/paths/~1chat~1completions"
+    },
+    {
+      "id": "refusal",
+      "evidence": "upstream:https://github.com/openai/openai-openapi/blob/ee483b4b26b2695fedc5c8af7b187e5986bd0add/openapi.json#/paths/~1chat~1completions"
+    },
+    {
+      "id": "legacy-function",
+      "evidence": "upstream:https://github.com/openai/openai-openapi/blob/ee483b4b26b2695fedc5c8af7b187e5986bd0add/openapi.json#/paths/~1chat~1completions"
+    },
+    {
+      "id": "tool-delta",
+      "evidence": "upstream:https://github.com/openai/openai-openapi/blob/ee483b4b26b2695fedc5c8af7b187e5986bd0add/openapi.json#/paths/~1chat~1completions"
+    },
+    {
+      "id": "choice-finished",
+      "evidence": "upstream:https://github.com/openai/openai-openapi/blob/ee483b4b26b2695fedc5c8af7b187e5986bd0add/openapi.json#/paths/~1chat~1completions"
+    },
+    {
+      "id": "usage",
+      "evidence": "upstream:https://github.com/openai/openai-openapi/blob/ee483b4b26b2695fedc5c8af7b187e5986bd0add/openapi.json#/paths/~1chat~1completions"
+    },
+    {
+      "id": "done",
+      "evidence": "upstream:https://github.com/openai/openai-openapi/blob/ee483b4b26b2695fedc5c8af7b187e5986bd0add/openapi.json#/paths/~1chat~1completions"
+    },
+    {
+      "id": "error",
+      "evidence": "upstream:https://github.com/openai/openai-openapi/blob/ee483b4b26b2695fedc5c8af7b187e5986bd0add/openapi.json#/paths/~1chat~1completions"
+    },
+    {
+      "id": "disconnect",
+      "evidence": "simulator:explicit-disconnect"
+    }
+  ],
+  "correlations": [
+    {
+      "id": "completion-identity-stable",
+      "evidence": "simulator:chat-core-correlation"
+    },
+    {
+      "id": "choice-index-isolated",
+      "evidence": "simulator:chat-core-correlation"
+    },
+    {
+      "id": "tool-id-stable",
+      "evidence": "simulator:chat-core-correlation"
+    },
+    {
+      "id": "finished-choice-forbids-delta",
+      "evidence": "simulator:chat-core-correlation"
+    },
+    {
+      "id": "usage-after-finish",
+      "evidence": "simulator:chat-core-correlation"
+    },
+    {
+      "id": "terminal-forbids-events",
+      "evidence": "simulator:chat-core-correlation"
+    }
+  ]
+}

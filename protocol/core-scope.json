@@ -25,8 +25,16 @@
       "AnthropicBetaModelInfo",
       "AnthropicErrorResponse"
     ],
-    "contentBlocks": ["text", "tool_use", "thinking", "redacted_thinking"],
-    "requestTypes": ["text", "tool_result"],
+    "contentBlocks": [
+      "text",
+      "tool_use",
+      "thinking",
+      "redacted_thinking"
+    ],
+    "requestTypes": [
+      "text",
+      "tool_result"
+    ],
     "supportTypes": [
       "redeemed",
       "not_applied",
@@ -41,7 +49,12 @@
       "rate_limit_error",
       "direct"
     ],
-    "deltas": ["text_delta", "input_json_delta", "thinking_delta", "signature_delta"],
+    "deltas": [
+      "text_delta",
+      "input_json_delta",
+      "thinking_delta",
+      "signature_delta"
+    ],
     "events": [
       "message_start",
       "content_block_start",
@@ -64,7 +77,8 @@
       "cancelResponse",
       "listInputItems",
       "Compactconversation",
-      "Getinputtokencounts"
+      "Getinputtokencounts",
+      "createChatCompletion"
     ],
     "schemaRoots": [
       "CreateResponse",
@@ -80,7 +94,11 @@
       "CompactResource",
       "ListModelsResponse",
       "Model",
-      "Error"
+      "Error",
+      "CreateChatCompletionRequest",
+      "CreateChatCompletionResponse",
+      "CreateChatCompletionStreamResponse",
+      "ErrorResponse"
     ],
     "events": [
       "response.queued",
@@ -107,8 +125,19 @@
       "response.function_call_arguments.done",
       "error"
     ],
-    "outputTypes": ["message", "output_text", "refusal", "reasoning", "function_call"],
-    "requestTypes": ["message", "input_text", "input_file", "function_call_output"],
+    "outputTypes": [
+      "message",
+      "output_text",
+      "refusal",
+      "reasoning",
+      "function_call"
+    ],
+    "requestTypes": [
+      "message",
+      "input_text",
+      "input_file",
+      "function_call_output"
+    ],
     "supportTypes": [
       "function",
       "reasoning_text",

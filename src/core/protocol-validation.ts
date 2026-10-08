@@ -35,11 +35,19 @@ export class SimulatorProtocolValidator {
   }
 
   validateStream(operation: MatchedOperation, steps: readonly StreamStep[]): void {
-    const schemaId = operation.provider === 'anthropic'
+    const chat = operation.id === 'createChatCompletion'
+    const schemaId = chat
+      ? 'openai:2020-12:CreateChatCompletionStreamResponse' as const
+      : operation.provider === 'anthropic'
       ? `anthropic:draft-07:${operation.beta ? 'AnthropicBeta' : 'Anthropic'}RawMessageStreamEvent` as const
       : `openai:2020-12:${operation.beta ? 'BetaResponseStreamEvent' : 'ResponseStreamEvent'}` as const
     for (const step of steps) {
       if (step.kind !== 'event') { continue }
+      if (chat && step.event === '[DONE]') { continue }
+      if (chat && isJsonObject(step.event) && 'error' in step.event) {
+        this.#schemas.validate('openai:2020-12:ErrorResponse', step.event)
+        continue
+      }
       if (operation.provider === 'anthropic' && isJsonObject(step.event)) {
         if (step.event.type === 'ping') { continue }
         if (step.event.type === 'error') {

@@ -14,14 +14,14 @@
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run --config vitest.config.ts",
-    "protocol:refresh:openai": "tsx scripts/refresh-openai-protocol.ts",
-    "protocol:refresh:anthropic": "tsx scripts/refresh-anthropic-protocol.ts",
-    "protocol:generate": "tsx scripts/generate-protocol-artifacts.ts",
-    "protocol:check": "tsx scripts/check-protocol-artifacts.ts",
-    "coverage:check": "tsx scripts/check-protocol-coverage.ts",
+    "protocol:refresh:openai": "node --import tsx scripts/refresh-openai-protocol.ts",
+    "protocol:refresh:anthropic": "node --import tsx scripts/refresh-anthropic-protocol.ts",
+    "protocol:generate": "node --import tsx scripts/generate-protocol-artifacts.ts",
+    "protocol:check": "node --import tsx scripts/check-protocol-artifacts.ts",
+    "coverage:check": "node --import tsx scripts/check-protocol-coverage.ts",
     "build": "node scripts/build.mjs",
     "check": "pnpm typecheck && pnpm test && pnpm protocol:check && pnpm coverage:check && pnpm build",
-    "start": "tsx run.ts"
+    "start": "node --import tsx run.ts"
   },
   "dependencies": {
     "ajv": "^8.20.0",
@@ -41,7 +41,7 @@
     "yaml": "^2.9.0",
     "esbuild": "0.25.12"
   },
-  "description": "Deterministic loopback simulator for the core Anthropic Messages and OpenAI Responses wire protocols.",
+  "description": "Deterministic loopback simulator for the core Anthropic Messages, OpenAI Responses, and OpenAI Chat Completions wire protocols.",
   "files": [
     "dist"
   ],
