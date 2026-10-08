@@ -225,7 +225,7 @@ export function diffSchemas(before, after) {
     if (isObject(left) && isObject(right)) {
       const newRequired = new Set(Array.isArray(right.required) ? right.required : [])
       for (const key of new Set([...Object.keys(left), ...Object.keys(right)])) {
-        if (documentation.has(key) || key.startsWith('x-')) continue
+        if (path.at(-1) !== 'properties' && (documentation.has(key) || key.startsWith('x-'))) continue
         const at = [...path, key]
         if (!(key in left)) {
           if (path.at(-1) === 'properties' && !required.has(key)) {
