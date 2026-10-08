@@ -208,6 +208,7 @@ jobs:
             protocol/**
 
       - name: Promote safe candidate after GitHub PR checks (opt in)
+        id: promotion
         if: >-
           steps.candidate.outputs.pull-request-number != '' &&
           steps.evaluation.outputs.safe == 'true' &&
