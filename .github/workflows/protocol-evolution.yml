@@ -1,6 +1,11 @@
 name: Protocol evolution
 
 on:
+  pull_request:
+    paths:
+      - automation/protocol-evolution.mjs
+      - .github/workflows/protocol-evolution.yml
+      - tests/protocol-evolution.test.mjs
   schedule:
     - cron: '43 3 * * *'
   workflow_dispatch:
@@ -15,7 +20,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  discovery-smoke:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify actual upstream discovery
+        run: node automation/protocol-evolution.mjs discover --out "$RUNNER_TEMP/protocol-discovery.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: upstream-discovery-smoke
+          path: ${{ runner.temp }}/protocol-discovery.json
+          if-no-files-found: ignore
+
   reconcile:
+    if: github.event_name != 'pull_request'
     name: Discover, evaluate and propose protocol refresh
     runs-on: ubuntu-latest
     timeout-minutes: 45
