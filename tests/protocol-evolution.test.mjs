@@ -67,6 +67,7 @@ describe('protocol evolution eligibility', () => {
     expect(diffSchemas(before, { ...before, properties: { id: { type: 'number' } } }).review).toHaveLength(1)
     expect(diffSchemas({ enum: ['one'] }, { enum: ['one', 'two'] }).review).toHaveLength(1)
     expect(diffSchemas(before, { ...before, description: 'new docs' }).review).toHaveLength(0)
+    expect(diffSchemas({ properties: { title: { type: 'string' } } }, { properties: { title: { type: 'number' } } }).review).toHaveLength(1)
   })
 
   it('never mistakes self-generated fixtures for independent certification', () => {
