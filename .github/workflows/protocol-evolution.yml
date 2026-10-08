@@ -1,0 +1,212 @@
+name: Protocol evolution
+
+on:
+  schedule:
+    - cron: '43 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: protocol-evolution
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    name: Discover, evaluate and propose protocol refresh
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      HAS_UPDATE_TOKEN: ${{ secrets.PROTOCOL_UPDATE_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Install pinned simulator
+        run: pnpm install --frozen-lockfile
+
+      - name: Discover upstream and report out-of-profile type drift
+        id: discovery
+        run: |
+          node automation/protocol-evolution.mjs discover \
+            --out "$RUNNER_TEMP/protocol-discovery.json"
+
+      - name: Save reviewed baseline
+        if: steps.discovery.outputs.changed == 'true'
+        run: |
+          mkdir -p "$RUNNER_TEMP/protocol-baseline"
+          cp -R protocol "$RUNNER_TEMP/protocol-baseline/protocol"
+          cp package.json "$RUNNER_TEMP/protocol-baseline/package.json"
+
+      - name: Refresh candidate with exact upstream identities
+        if: steps.discovery.outputs.changed == 'true'
+        env:
+          OPENAI_REF: ${{ steps.discovery.outputs.openai_sha }}
+          ANTHROPIC_VERSION: ${{ steps.discovery.outputs.anthropic_version }}
+          OPENAI_SDK_VERSION: ${{ steps.discovery.outputs.openai_version }}
+          UPDATE_OPENAI: ${{ steps.discovery.outputs.update_openai }}
+          UPDATE_ANTHROPIC: ${{ steps.discovery.outputs.update_anthropic }}
+          UPDATE_OPENAI_SDK: ${{ steps.discovery.outputs.update_openai_sdk }}
+        run: |
+          set -euo pipefail
+          if [ "$UPDATE_ANTHROPIC" = 'true' ]; then
+            pnpm add --save-dev --save-exact "anthropic-sdk@npm:@anthropic-ai/sdk@$ANTHROPIC_VERSION"
+            pnpm protocol:refresh:anthropic
+          fi
+          if [ "$UPDATE_OPENAI_SDK" = 'true' ]; then
+            pnpm add --save-dev --save-exact "openai@$OPENAI_SDK_VERSION"
+          fi
+          if [ "$UPDATE_OPENAI" = 'true' ]; then
+            pnpm protocol:refresh:openai --ref "$OPENAI_REF"
+          fi
+          pnpm protocol:generate
+
+      - name: Simulator metrics and full regression suite
+        if: steps.discovery.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          pnpm check 2>&1 | tee "$RUNNER_TEMP/protocol-repository-check.log"
+
+      # Use the real pinned producers and Huihua's independent native-store oracle.
+      # Unlike Huihua's daily CI, SIMULATOR_DIR is this newly refreshed checkout,
+      # not Huihua's pinned simulator SHA.
+      - name: Pinned producer journeys against the candidate
+        if: steps.discovery.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          git clone --quiet --depth=1 https://github.com/wibus-wee/huihua.git "$RUNNER_TEMP/huihua"
+          (
+            cd "$RUNNER_TEMP/huihua"
+            npm exec --yes --package=pnpm@12.4.2 -- pnpm install --frozen-lockfile --ignore-scripts
+          )
+          npm install --prefix "$RUNNER_TEMP/producers" --no-save \
+            '@anthropic-ai/claude-code@2.1.292' \
+            '@moonshot-ai/kimi-code@2.1.1' \
+            '@openai/codex@0.161.0'
+          for provider in claude codex kimi; do
+            case "$provider" in
+              claude) binary=claude ;;
+              codex) binary=codex ;;
+              kimi) binary=kimi ;;
+            esac
+            (
+              cd "$RUNNER_TEMP/huihua"
+              export SIMULATOR_DIR="$GITHUB_WORKSPACE"
+              export PRODUCER_BIN="$RUNNER_TEMP/producers/node_modules/.bin/$binary"
+              export COMPAT_PROVIDER="$provider"
+              export COMPAT_LANE=pinned
+              export COMPAT_REPORT="$RUNNER_TEMP/protocol-consumer-$provider.json"
+              export CODEX_COMPAT_UNSANDBOXED=1
+              node "tools/producer-compat/$provider.ts"
+            ) 2>&1 | tee "$RUNNER_TEMP/protocol-consumer-$provider.log"
+          done
+
+      - name: Assemble independent verification evidence
+        if: steps.discovery.outputs.changed == 'true'
+        run: |
+          cat > "$RUNNER_TEMP/protocol-gates.json" <<'JSON'
+          {
+            "repository-check": "passed",
+            "consumer-claude": "passed",
+            "consumer-codex": "passed",
+            "consumer-kimi": "passed"
+          }
+          JSON
+          git -C "$RUNNER_TEMP/huihua" rev-parse HEAD > "$RUNNER_TEMP/protocol-huihua-revision.txt"
+
+      - name: Evaluate semantic safety and auto-promotion eligibility
+        if: steps.discovery.outputs.changed == 'true'
+        id: evaluation
+        run: |
+          node automation/protocol-evolution.mjs evaluate \
+            --baseline "$RUNNER_TEMP/protocol-baseline" \
+            --discovery "$RUNNER_TEMP/protocol-discovery.json" \
+            --gates "$RUNNER_TEMP/protocol-gates.json" \
+            --out "$RUNNER_TEMP/protocol-evaluation.json" \
+            --markdown "$RUNNER_TEMP/protocol-evaluation.md"
+          cat "$RUNNER_TEMP/protocol-evaluation.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload reconciliation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: protocol-evolution-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/protocol-discovery.json
+            ${{ runner.temp }}/protocol-evaluation.json
+            ${{ runner.temp }}/protocol-evaluation.md
+            ${{ runner.temp }}/protocol-repository-check.log
+            ${{ runner.temp }}/protocol-consumer-*.log
+            ${{ runner.temp }}/protocol-consumer-*.json*
+            ${{ runner.temp }}/protocol-huihua-revision.txt
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Create or update a single reviewed candidate PR
+        if: steps.discovery.outputs.changed == 'true' && steps.evaluation.outcome == 'success'
+        uses: peter-evans/create-pull-request@v8
+        id: candidate
+        with:
+          token: ${{ secrets.PROTOCOL_UPDATE_TOKEN || github.token }}
+          branch: automation/upstream-protocol-refresh
+          base: main
+          delete-branch: true
+          title: 'chore(protocol): reconcile latest upstream contracts'
+          body-path: ${{ runner.temp }}/protocol-evaluation.md
+          commit-message: 'chore(protocol): reconcile upstream contracts after compatibility eval'
+          add-paths: |
+            package.json
+            pnpm-lock.yaml
+            protocol/**
+
+      # Opt-in because GITHUB_TOKEN-created PRs do not trigger normal PR CI.
+      # Never promote without a bot token that can trigger independent checks.
+      - name: Promote safe candidate after GitHub PR checks
+        if: >-
+          steps.candidate.outputs.pull-request-number != '' &&
+          steps.evaluation.outputs.safe == 'true' &&
+          vars.PROTOCOL_AUTO_PROMOTE == 'true' &&
+          env.HAS_UPDATE_TOKEN == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.PROTOCOL_UPDATE_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.candidate.outputs.pull-request-number }}
+        run: |
+          set -euo pipefail
+          gh pr checks "$PR_NUMBER" --watch --fail-fast
+          gh pr merge "$PR_NUMBER" --squash --delete-branch
+
+      - name: Track blocked and failed canaries
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          body="$RUNNER_TEMP/protocol-evolution-failure.md"
+          cat > "$body" <<EOF
+          <!-- protocol-evolution-failure:v1 -->
+          Protocol refresh could not certify or publish a candidate.
+
+          - Run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          - Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          - Ref: $GITHUB_SHA
+
+          Inspect the archived discovery, repository/consumer logs and evaluation
+          evidence. A missing or blocked gate is **not** a compatibility pass.
+          EOF
+          existing="$(gh issue list --state open --search '"Protocol evolution failure" in:title' \
+            --json number --jq '.[0].number // empty' || true)"
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --body-file "$body"
+          else
+            gh issue create --title "Protocol evolution failure" --body-file "$body"
+          fi
