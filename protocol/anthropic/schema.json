@@ -655,6 +655,7 @@
             },
             {
               "enum": [
+                "claude-haiku-5-5",
                 "claude-sonnet-5-5",
                 "claude-fable-5-1",
                 "claude-opus-5-5",
@@ -1392,6 +1393,7 @@
             },
             {
               "enum": [
+                "claude-haiku-5-5",
                 "claude-sonnet-5-5",
                 "claude-fable-5-1",
                 "claude-opus-5-5",
@@ -2630,6 +2632,7 @@
             },
             {
               "enum": [
+                "claude-haiku-5-5",
                 "claude-sonnet-5-5",
                 "claude-fable-5-1",
                 "claude-opus-5-5",
@@ -2854,7 +2857,7 @@
             },
             "code_execution": {
               "$ref": "#/definitions/BetaCapabilitySupport",
-              "description": "Whether the model supports code execution tools."
+              "description": "Whether code that the model runs in the code execution tool can call the request's other tools, as in programmatic tool calling and dynamic filtering for web search and web fetch. Support for the code execution tool itself is in `server_tools.code_execution`."
             },
             "compaction": {
               "anyOf": [
@@ -2883,6 +2886,10 @@
               "$ref": "#/definitions/BetaCapabilitySupport",
               "description": "Whether the model accepts PDF content blocks."
             },
+            "server_tools": {
+              "$ref": "#/definitions/BetaServerToolsCapability",
+              "description": "Whether this model supports the web search and code execution server tools. `supported` is true when the model supports at least one of the tools. A supported tool can still be rejected for your organization, for example when an admin has turned web search off."
+            },
             "structured_outputs": {
               "$ref": "#/definitions/BetaCapabilitySupport",
               "description": "Whether the model supports structured output / JSON mode / strict tool schemas."
@@ -2901,6 +2908,7 @@
             "effort",
             "image_input",
             "pdf_input",
+            "server_tools",
             "structured_outputs",
             "thinking"
           ],
@@ -2938,6 +2946,13 @@
               "description": "RFC 3339 datetime string representing the time at which the model was released. May be set to an epoch value if the release date is unknown.",
               "type": "string"
             },
+            "deprecated_at": {
+              "description": "RFC 3339 datetime string representing the time of the model's most recent deprecation. Populated for `deprecated` and `retired` models; `null` while the model is `active`.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "display_name": {
               "description": "A human-readable name for the model.",
               "type": "string"
@@ -2945,6 +2960,26 @@
             "id": {
               "description": "Unique model identifier.",
               "type": "string"
+            },
+            "lifecycle": {
+              "description": "The model's current lifecycle stage.\n\n- `active`: The model is available for use, open to new adopters, and not   scheduled for retirement.\n- `deprecated`: The model remains callable for organizations with existing   access, but is headed for retirement and closed to new adopters.\n- `retired`: The model is no longer available for use; inference requests naming   it fail. It remains in the catalogue as the historical record of its   retirement.",
+              "enum": [
+                "active",
+                "deprecated",
+                "retired"
+              ],
+              "type": "string"
+            },
+            "line": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BetaModelLine"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The model line this model belongs to, such as `opus` for both Claude Opus 4.5 and Claude Opus 4.6. More lines may be added. `null` when the model belongs to no line; do not infer a line from the `id`."
             },
             "max_input_tokens": {
               "description": "Maximum input context window size in tokens for this model.",
@@ -2960,6 +2995,13 @@
                 "null"
               ]
             },
+            "retires_at": {
+              "description": "RFC 3339 datetime string representing the model's currently scheduled retirement date. The schedule can be revised until retirement occurs; `null` while the model is `active` or while no retirement is scheduled. A past date on a `deprecated` model means retirement is overdue, not that it has occurred: `lifecycle` is the retirement signal.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "type": {
               "const": "model",
               "description": "Object type.\n\nFor Models, this is always `\"model\"`.",
@@ -2971,10 +3013,49 @@
             "allowed_fallback_models",
             "capabilities",
             "created_at",
+            "deprecated_at",
             "display_name",
+            "lifecycle",
+            "line",
             "max_input_tokens",
             "max_tokens",
+            "retires_at",
             "type"
+          ],
+          "type": "object"
+        },
+        "BetaModelLine": {
+          "description": "A Claude model line, such as `opus` or `sonnet`. More lines may be added as new values.",
+          "enum": [
+            "haiku",
+            "sonnet",
+            "opus",
+            "fable",
+            "mythos"
+          ],
+          "type": "string"
+        },
+        "BetaServerToolsCapability": {
+          "additionalProperties": false,
+          "description": "Web search and code execution tool support, with one entry per tool.",
+          "properties": {
+            "code_execution": {
+              "$ref": "#/definitions/BetaCapabilitySupport",
+              "description": "Whether the model supports the code execution tool: true when the model supports at least one version of the tool, not necessarily every version."
+            },
+            "supported": {
+              "description": "Whether this capability is supported by the model.",
+              "type": "boolean"
+            },
+            "web_search": {
+              "$ref": "#/definitions/BetaCapabilitySupport",
+              "description": "Whether the model supports the web search tool: true when the model supports at least one version of the tool, not necessarily every version."
+            }
+          },
+          "required": [
+            "code_execution",
+            "supported",
+            "web_search"
           ],
           "type": "object"
         },
@@ -2999,19 +3080,24 @@
         },
         "BetaThinkingTypes": {
           "additionalProperties": false,
-          "description": "Supported thinking type configurations.",
+          "description": "Which `thinking.type` values the model accepts on requests. Read each key on its own: for example, `enabled` can be false while `disabled` is true.",
           "properties": {
             "adaptive": {
               "$ref": "#/definitions/BetaCapabilitySupport",
-              "description": "Whether the model supports thinking with type 'adaptive' (auto)."
+              "description": "Whether the model accepts thinking with type 'adaptive' (the model decides whether and how much to think)."
+            },
+            "disabled": {
+              "$ref": "#/definitions/BetaCapabilitySupport",
+              "description": "Whether the model accepts thinking with type 'disabled' (thinking turned off). False exactly when a request that sends it gets a 400 from this model. True on a model that does not support thinking."
             },
             "enabled": {
               "$ref": "#/definitions/BetaCapabilitySupport",
-              "description": "Whether the model supports thinking with type 'enabled'."
+              "description": "Whether the model accepts thinking with type 'enabled' (extended thinking with a caller-set `budget_tokens`)."
             }
           },
           "required": [
             "adaptive",
+            "disabled",
             "enabled"
           ],
           "type": "object"
@@ -3100,6 +3186,18 @@
               "description": "Header param: Optional header to specify the beta version(s) you want to use.",
               "items": {
                 "$ref": "#/definitions/AnthropicBeta"
+              },
+              "type": "array"
+            },
+            "lifecycle": {
+              "description": "Query param: Filter the list to models in any of the given lifecycle stages (`active`, `deprecated`, or `retired`). Up to 3 values. When omitted, the list contains the `active` and `deprecated` models; `retired` models appear only when `retired` is requested explicitly.",
+              "items": {
+                "enum": [
+                  "active",
+                  "deprecated",
+                  "retired"
+                ],
+                "type": "string"
               },
               "type": "array"
             },
@@ -4256,6 +4354,7 @@
             },
             {
               "enum": [
+                "claude-haiku-5-5",
                 "claude-sonnet-5-5",
                 "claude-fable-5-1",
                 "claude-opus-5-5",
@@ -4742,6 +4841,7 @@
             },
             {
               "enum": [
+                "claude-haiku-5-5",
                 "claude-sonnet-5-5",
                 "claude-fable-5-1",
                 "claude-opus-5-5",
@@ -5171,6 +5271,7 @@
             },
             {
               "enum": [
+                "claude-haiku-5-5",
                 "claude-sonnet-5-5",
                 "claude-fable-5-1",
                 "claude-opus-5-5",
@@ -5950,6 +6051,7 @@
             },
             {
               "enum": [
+                "claude-haiku-5-5",
                 "claude-sonnet-5-5",
                 "claude-fable-5-1",
                 "claude-opus-5-5",
@@ -6481,7 +6583,7 @@
             },
             "code_execution": {
               "$ref": "#/definitions/CapabilitySupport",
-              "description": "Whether the model supports code execution tools."
+              "description": "Whether code that the model runs in the code execution tool can call the request's other tools, as in programmatic tool calling and dynamic filtering for web search and web fetch. Support for the code execution tool itself is in `server_tools.code_execution`."
             },
             "context_management": {
               "$ref": "#/definitions/ContextManagementCapability",
@@ -6498,6 +6600,10 @@
             "pdf_input": {
               "$ref": "#/definitions/CapabilitySupport",
               "description": "Whether the model accepts PDF content blocks."
+            },
+            "server_tools": {
+              "$ref": "#/definitions/ServerToolsCapability",
+              "description": "Whether this model supports the web search and code execution server tools. `supported` is true when the model supports at least one of the tools. A supported tool can still be rejected for your organization, for example when an admin has turned web search off."
             },
             "structured_outputs": {
               "$ref": "#/definitions/CapabilitySupport",
@@ -6516,6 +6622,7 @@
             "effort",
             "image_input",
             "pdf_input",
+            "server_tools",
             "structured_outputs",
             "thinking"
           ],
@@ -6539,6 +6646,13 @@
               "description": "RFC 3339 datetime string representing the time at which the model was released. May be set to an epoch value if the release date is unknown.",
               "type": "string"
             },
+            "deprecated_at": {
+              "description": "RFC 3339 datetime string representing the time of the model's most recent deprecation. Populated for `deprecated` and `retired` models; `null` while the model is `active`.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "display_name": {
               "description": "A human-readable name for the model.",
               "type": "string"
@@ -6546,6 +6660,26 @@
             "id": {
               "description": "Unique model identifier.",
               "type": "string"
+            },
+            "lifecycle": {
+              "description": "The model's current lifecycle stage.\n\n- `active`: The model is available for use, open to new adopters, and not   scheduled for retirement.\n- `deprecated`: The model remains callable for organizations with existing   access, but is headed for retirement and closed to new adopters.\n- `retired`: The model is no longer available for use; inference requests naming   it fail. It remains in the catalogue as the historical record of its   retirement.",
+              "enum": [
+                "active",
+                "deprecated",
+                "retired"
+              ],
+              "type": "string"
+            },
+            "line": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/ModelLine"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The model line this model belongs to, such as `opus` for both Claude Opus 4.5 and Claude Opus 4.6. More lines may be added. `null` when the model belongs to no line; do not infer a line from the `id`."
             },
             "max_input_tokens": {
               "description": "Maximum input context window size in tokens for this model.",
@@ -6561,6 +6695,13 @@
                 "null"
               ]
             },
+            "retires_at": {
+              "description": "RFC 3339 datetime string representing the model's currently scheduled retirement date. The schedule can be revised until retirement occurs; `null` while the model is `active` or while no retirement is scheduled. A past date on a `deprecated` model means retirement is overdue, not that it has occurred: `lifecycle` is the retirement signal.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "type": {
               "const": "model",
               "description": "Object type.\n\nFor Models, this is always `\"model\"`.",
@@ -6571,10 +6712,49 @@
             "id",
             "capabilities",
             "created_at",
+            "deprecated_at",
             "display_name",
+            "lifecycle",
+            "line",
             "max_input_tokens",
             "max_tokens",
+            "retires_at",
             "type"
+          ],
+          "type": "object"
+        },
+        "ModelLine": {
+          "description": "A Claude model line, such as `opus` or `sonnet`. More lines may be added as new values.",
+          "enum": [
+            "haiku",
+            "sonnet",
+            "opus",
+            "fable",
+            "mythos"
+          ],
+          "type": "string"
+        },
+        "ServerToolsCapability": {
+          "additionalProperties": false,
+          "description": "Web search and code execution tool support, with one entry per tool.",
+          "properties": {
+            "code_execution": {
+              "$ref": "#/definitions/CapabilitySupport",
+              "description": "Whether the model supports the code execution tool: true when the model supports at least one version of the tool, not necessarily every version."
+            },
+            "supported": {
+              "description": "Whether this capability is supported by the model.",
+              "type": "boolean"
+            },
+            "web_search": {
+              "$ref": "#/definitions/CapabilitySupport",
+              "description": "Whether the model supports the web search tool: true when the model supports at least one version of the tool, not necessarily every version."
+            }
+          },
+          "required": [
+            "code_execution",
+            "supported",
+            "web_search"
           ],
           "type": "object"
         },
@@ -6599,19 +6779,24 @@
         },
         "ThinkingTypes": {
           "additionalProperties": false,
-          "description": "Supported thinking type configurations.",
+          "description": "Which `thinking.type` values the model accepts on requests. Read each key on its own: for example, `enabled` can be false while `disabled` is true.",
           "properties": {
             "adaptive": {
               "$ref": "#/definitions/CapabilitySupport",
-              "description": "Whether the model supports thinking with type 'adaptive' (auto)."
+              "description": "Whether the model accepts thinking with type 'adaptive' (the model decides whether and how much to think)."
+            },
+            "disabled": {
+              "$ref": "#/definitions/CapabilitySupport",
+              "description": "Whether the model accepts thinking with type 'disabled' (thinking turned off). False exactly when a request that sends it gets a 400 from this model. True on a model that does not support thinking."
             },
             "enabled": {
               "$ref": "#/definitions/CapabilitySupport",
-              "description": "Whether the model supports thinking with type 'enabled'."
+              "description": "Whether the model accepts thinking with type 'enabled' (extended thinking with a caller-set `budget_tokens`)."
             }
           },
           "required": [
             "adaptive",
+            "disabled",
             "enabled"
           ],
           "type": "object"
@@ -6700,6 +6885,18 @@
               "deprecated": "Deprecated. This parameter will be removed from this method in a\nfuture release. To use beta features, call the beta models methods\n(`client.beta.models`) instead.",
               "items": {
                 "$ref": "#/definitions/AnthropicBeta"
+              },
+              "type": "array"
+            },
+            "lifecycle": {
+              "description": "Query param: Filter the list to models in any of the given lifecycle stages (`active`, `deprecated`, or `retired`). Up to 3 values. When omitted, the list contains the `active` and `deprecated` models; `retired` models appear only when `retired` is requested explicitly.",
+              "items": {
+                "enum": [
+                  "active",
+                  "deprecated",
+                  "retired"
+                ],
+                "type": "string"
               },
               "type": "array"
             },
@@ -7124,6 +7321,7 @@
             },
             {
               "enum": [
+                "claude-haiku-5-5",
                 "claude-sonnet-5-5",
                 "claude-fable-5-1",
                 "claude-opus-5-5",
