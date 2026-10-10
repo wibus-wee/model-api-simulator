@@ -31,15 +31,15 @@
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
-    "anthropic-sdk": "npm:@anthropic-ai/sdk@0.131.0",
+    "anthropic-sdk": "npm:@anthropic-ai/sdk@0.133.0",
+    "esbuild": "0.25.12",
     "fast-check": "^4.9.0",
-    "openai": "7.30.0",
+    "openai": "7.32.0",
     "ts-json-schema-generator": "^2.9.0",
     "tsx": "^4.23.13",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11",
-    "yaml": "^2.9.0",
-    "esbuild": "0.25.12"
+    "yaml": "^2.9.0"
   },
   "description": "Deterministic loopback simulator for the core Anthropic Messages, OpenAI Responses, and OpenAI Chat Completions wire protocols.",
   "files": [

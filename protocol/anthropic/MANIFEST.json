@@ -3,11 +3,11 @@
   "declarations": [
     {
       "path": "resources/messages/messages.d.ts",
-      "sha256": "879dcffc4c91ffad6b80aa2486d9e3c5d3d33e07661037ae414e121b73955c5c"
+      "sha256": "a74f7729e6e739989c5e659221dd2960d2d4549c2d035f6269a4856ecf5c6848"
     },
     {
       "path": "resources/models.d.ts",
-      "sha256": "f18629f366776c79eb90e1b769c72c2370ac258746c3e8025f10c63a9a26cd89"
+      "sha256": "701b6673e4c9ee4cb509f44bb7c4237b9069d8285897356e1a67a0ae220f2b38"
     },
     {
       "path": "resources/shared.d.ts",
@@ -15,21 +15,21 @@
     },
     {
       "path": "resources/beta/messages/messages.d.ts",
-      "sha256": "851da95a0fa1c05c5c70f849c5a14801b20312ee8e395dd25382434721a8b047"
+      "sha256": "aac201f7012edaba13fcd2c35b9f4866574f79871656594bf0077c2c1e750d48"
     },
     {
       "path": "resources/beta/models.d.ts",
-      "sha256": "35bb89d99e5aeddfe256470bf2255b0b1435ae2493eb4c07a8e5fb10ac14d3fb"
+      "sha256": "3bae55443a114662454e6d15492f2173743023b1dd999d36bb7458e5ab510e64"
     }
   ],
-  "generatedAt": "2026-10-08T08:52:47.333Z",
+  "generatedAt": "2026-10-10T10:08:03.982Z",
   "grammarSha256": "ebdd034edaee848ac357124935db45a1c87c4473b41de1ab0f223c265c2dfea5",
   "owner": "@cradle/model-api-simulator",
-  "packageIntegrity": "sha512-9+PepoU7qVMmM70jSahdnfcMHAvAnzhMOLv2W9WjRLO+OG/MAiBETkwKZqv7KIJ1Cj5h8eZ019bHzZaq+Mbepw==",
+  "packageIntegrity": "sha512-jlqUN8p8ESTJj+GJnA4KjzbEfF1waEoGzRT8jwytlYGFFgv+/DUQOxlYGvYw10UzhD1kwLqYzxvA3FrTB2YWuQ==",
   "provider": "anthropic",
   "refreshCommand": "pnpm protocol:refresh:anthropic",
-  "schemaSha256": "d8964e11d847153500b63becfe4876e6f855d68bcb52c89287de157335f9d2cc",
-  "sdkVersion": "0.131.0",
+  "schemaSha256": "ca2fc77a61c486d387bc6562917776cfc56d15133760e2e973184669e1370baf",
+  "sdkVersion": "0.133.0",
   "selectedTypes": [
     "AnthropicMessageCreateParams",
     "AnthropicMessageCountTokensParams",
