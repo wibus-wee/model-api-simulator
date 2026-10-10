@@ -2,15 +2,15 @@
   "chatGrammarSha256": "7daaa5528a6899b9859d7104c6a20541c92c48ef2210d3e8613938dae3d5f2be",
   "chatTransitionCorpusSha256": "cb8bd61a569c9ba0f0188dd770f8b1beb1fa5e33e7ee222699cc50b15ad172e7",
   "coreScopeSha256": "770fafed6305715dae6907509506ea976e1897a5dbd282b1500d399fbe6c5893",
-  "generatedAt": "2026-10-08T08:51:33.617Z",
+  "generatedAt": "2026-10-10T10:08:08.557Z",
   "grammarSha256": "7377c56bc4c2fde95709e1c2e33388635a53f0b573d4838b88673f7d578ab6b8",
-  "normalizedSha256": "4938c3ee4ffaeba1ff1b1af9d42652c486764486374b6a0a4fe5c39d9b739eec",
+  "normalizedSha256": "6e1b4de66672dd762752cbdc6e20a879ffcc0701eeebf6fe11146d7ea32c4f78",
   "openapiVersion": "3.1.0",
   "owner": "@cradle/model-api-simulator",
   "provider": "openai",
-  "refreshCommand": "pnpm protocol:refresh:openai --ref ee483b4b26b2695fedc5c8af7b187e5986bd0add",
-  "sourceSha256": "dbcffdf317becf2d1a561fe5bd7b307ad562eecc6c534a21e4696eaacf55d856",
-  "sourceUrl": "https://raw.githubusercontent.com/openai/openai-openapi/ee483b4b26b2695fedc5c8af7b187e5986bd0add/openapi.json",
+  "refreshCommand": "pnpm protocol:refresh:openai --ref e95c0fe615f45a19e8878af923a729948445a6bd",
+  "sourceSha256": "17975b832308c380e4a365e20b37bb17de7e4e27cec3ba84c5be185bd9b400b6",
+  "sourceUrl": "https://raw.githubusercontent.com/openai/openai-openapi/e95c0fe615f45a19e8878af923a729948445a6bd/openapi.json",
   "transitionCorpusSha256": "f9870f8df376b067a252f1399660c807b7a0e08608a562ade12610919548e8cf",
-  "upstreamRef": "ee483b4b26b2695fedc5c8af7b187e5986bd0add"
+  "upstreamRef": "e95c0fe615f45a19e8878af923a729948445a6bd"
 }
