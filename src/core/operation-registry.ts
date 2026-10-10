@@ -179,10 +179,14 @@ export class OperationRegistry {
   ): void {
     const url = new URL(request.url)
     rejectUnknownQuery(url, definition.id === 'models.list'
-      ? new Set(['after_id', 'before_id', 'limit'])
+      ? new Set(['after_id', 'before_id', 'limit', 'lifecycle[]', 'beta'])
       : new Set(['beta']))
     if (definition.id === 'models.list') {
       validateIntegerQuery(url, 'limit', 1, 1000)
+      const lifecycle = url.searchParams.getAll('lifecycle[]')
+      if (lifecycle.length > 3 || lifecycle.some(value => !['active', 'deprecated', 'retired'].includes(value))) {
+        throw new Error('lifecycle[] must contain at most 3 active, deprecated, or retired values')
+      }
       return
     }
     if (definition.requestSchema) {

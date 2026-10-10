@@ -40,7 +40,11 @@ export async function handleAnthropicRequest(
       && !controller.nextMatches('anthropic', observed)
     ) {
       controller.record(observed)
-      return autoAnthropicResponse(controller, observed)
+      const response = autoAnthropicResponse(controller, observed)
+      if (operation.id === 'models.list' || operation.id === 'models.retrieve') {
+        protocol.validateJsonResponse(operation, request, response.status, await response.clone().json())
+      }
+      return response
     }
     const exchange = controller.take('anthropic', observed)
     const headers = new Headers(exchange.response.headers)
