@@ -25,8 +25,8 @@ importers:
         specifier: ^22.20.1
         version: 22.20.5
       anthropic-sdk:
-        specifier: npm:@anthropic-ai/sdk@0.131.0
-        version: '@anthropic-ai/sdk@0.131.0'
+        specifier: npm:@anthropic-ai/sdk@0.133.0
+        version: '@anthropic-ai/sdk@0.133.0'
       esbuild:
         specifier: 0.25.12
         version: 0.25.12
@@ -34,8 +34,8 @@ importers:
         specifier: ^4.9.0
         version: 4.10.2
       openai:
-        specifier: 7.30.0
-        version: 7.30.0
+        specifier: 7.31.0
+        version: 7.31.0
       ts-json-schema-generator:
         specifier: ^2.9.0
         version: 2.9.0
@@ -54,8 +54,8 @@ importers:
 
 packages:
 
-  '@anthropic-ai/sdk@0.131.0':
-    resolution: {integrity: sha512-9+PepoU7qVMmM70jSahdnfcMHAvAnzhMOLv2W9WjRLO+OG/MAiBETkwKZqv7KIJ1Cj5h8eZ019bHzZaq+Mbepw==}
+  '@anthropic-ai/sdk@0.133.0':
+    resolution: {integrity: sha512-jlqUN8p8ESTJj+GJnA4KjzbEfF1waEoGzRT8jwytlYGFFgv+/DUQOxlYGvYw10UzhD1kwLqYzxvA3FrTB2YWuQ==}
     hasBin: true
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
@@ -802,8 +802,8 @@ packages:
     resolution: {integrity: sha512-XrsrhT5sybtKI6wakr2SPOlGZWWYbUXZ7a0jT8/QOeAPau+1X/bSegNe5YR75oJmEZQbKningirmGOEJCIk61Q==}
     engines: {node: '>=12.20.0'}
 
-  openai@7.30.0:
-    resolution: {integrity: sha512-tvvcPdhS56B/79o0mJS5h4JndAov5Sz78T7CFl4gJ+C9S3GoSqHNLO6lG/8kdK+/c13zWEI97Srf66ar0V242g==}
+  openai@7.31.0:
+    resolution: {integrity: sha512-ZGAzauuYb0DdB53qVbIR+X8rdmNtWgiElrrMthbZCVreLcIsQJBwzAIWUbpB2FkQu2Cj6OJ9zJR1EKMUYn4/SQ==}
     engines: {node: '>=22.0.0'}
     peerDependencies:
       '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
@@ -1036,7 +1036,7 @@ packages:
 
 snapshots:
 
-  '@anthropic-ai/sdk@0.131.0':
+  '@anthropic-ai/sdk@0.133.0':
     dependencies:
       json-schema-to-ts: 3.1.1
       standardwebhooks: 1.1.1
@@ -1552,7 +1552,7 @@ snapshots:
 
   obug@2.2.1: {}
 
-  openai@7.30.0: {}
+  openai@7.31.0: {}
 
   openapi-types@12.1.3: {}
 

@@ -23,7 +23,7 @@ export function autoAnthropicResponse(
     )
   }
   if (observed.method.toUpperCase() === 'GET') {
-    return modelsResponse(observed.path, body)
+    return modelsResponse(observed)
   }
 
   const model = typeof body.model === 'string' ? body.model : FALLBACK_MODEL
@@ -139,16 +139,29 @@ function streamSteps(
   ]
 }
 
-function modelsResponse(path: string, _body: JsonObject): Response {
+function modelsResponse(observed: Omit<ObservedRequest, 'index'>): Response {
+  const { path, query = {}, headers } = observed
+  const beta = query.beta === 'true' || Object.hasOwn(headers, 'anthropic-beta')
   const model = {
     id: FALLBACK_MODEL,
     type: 'model',
     display_name: 'Simulator Model',
     created_at: '2025-01-01T00:00:00Z',
+    capabilities: null,
+    max_input_tokens: null,
+    max_tokens: null,
+    deprecated_at: null,
+    lifecycle: 'active',
+    line: null,
+    retires_at: null,
+    ...(beta ? { allowed_fallback_models: null } : {}),
   }
   if (path === '/v1/models') {
+    const lifecycle = query['lifecycle[]']
+    const filters = typeof lifecycle === 'string' ? [lifecycle] : lifecycle
+    const data = filters === undefined || filters.includes(model.lifecycle) ? [model] : []
     return Response.json(
-      { data: [model], has_more: false, first_id: model.id, last_id: model.id },
+      { data, has_more: false, first_id: data[0]?.id ?? null, last_id: data[0]?.id ?? null },
       { headers: { 'request-id': 'req_simulator_auto' } },
     )
   }
