@@ -1824,7 +1824,13 @@
               "gpt-4-vision-preview": {
                 "message": "Announced shutdown date: 2024-12-06. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
               },
+              "gpt-4.1": {
+                "message": "Announced shutdown date: 2027-01-14. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
+              },
               "gpt-4.1-2025-04-14": {
+                "message": "Announced shutdown date: 2027-01-14. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
+              },
+              "gpt-4.1-mini": {
                 "message": "Announced shutdown date: 2027-01-14. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
               },
               "gpt-4.1-mini-2025-04-14": {
@@ -1835,6 +1841,9 @@
               },
               "gpt-4.1-nano-2025-04-14": {
                 "message": "Announced shutdown date: 2026-10-23. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
+              },
+              "gpt-4o": {
+                "message": "Announced shutdown date: 2027-01-14. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
               },
               "gpt-4o-2024-05-13": {
                 "message": "Announced shutdown date: 2026-10-23. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
@@ -1856,6 +1865,9 @@
               },
               "gpt-4o-audio-preview-2025-06-03": {
                 "message": "Announced shutdown date: 2026-05-07. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
+              },
+              "gpt-4o-mini": {
+                "message": "Announced shutdown date: 2027-01-14. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
               },
               "gpt-4o-mini-2024-07-18": {
                 "message": "Announced shutdown date: 2027-01-14. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
@@ -8607,7 +8619,13 @@
               "gpt-4-vision-preview": {
                 "message": "Announced shutdown date: 2024-12-06. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
               },
+              "gpt-4.1": {
+                "message": "Announced shutdown date: 2027-01-14. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
+              },
               "gpt-4.1-2025-04-14": {
+                "message": "Announced shutdown date: 2027-01-14. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
+              },
+              "gpt-4.1-mini": {
                 "message": "Announced shutdown date: 2027-01-14. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
               },
               "gpt-4.1-mini-2025-04-14": {
@@ -8618,6 +8636,9 @@
               },
               "gpt-4.1-nano-2025-04-14": {
                 "message": "Announced shutdown date: 2026-10-23. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
+              },
+              "gpt-4o": {
+                "message": "Announced shutdown date: 2027-01-14. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
               },
               "gpt-4o-2024-05-13": {
                 "message": "Announced shutdown date: 2026-10-23. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
@@ -8639,6 +8660,9 @@
               },
               "gpt-4o-audio-preview-2025-06-03": {
                 "message": "Announced shutdown date: 2026-05-07. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
+              },
+              "gpt-4o-mini": {
+                "message": "Announced shutdown date: 2027-01-14. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
               },
               "gpt-4o-mini-2024-07-18": {
                 "message": "Announced shutdown date: 2027-01-14. See https://developers.openai.com/api/docs/deprecations for details and recommended replacements."
@@ -12316,6 +12340,11 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Response"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseStreamEvent"
                 }
               }
             },

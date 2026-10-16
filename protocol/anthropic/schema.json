@@ -1328,7 +1328,7 @@
               "description": "Body param: Deprecated: Use `output_config.format` instead. See [structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)\n\nA schema to specify Claude's output format in responses. This parameter will be removed in a future release."
             },
             "speed": {
-              "description": "Body param: The inference speed mode for this request. `\"fast\"` enables high output-tokens-per-second inference.",
+              "description": "Body param: The inference speed mode for this request. `\"fast\"` enables high output-tokens-per-second inference.\n\nSome models require the `fast-mode-2026-02-01` beta header for any `speed` value. See [fast mode](https://platform.claude.com/docs/en/build-with-claude/fast-mode) for which models.",
               "enum": [
                 "standard",
                 "fast",
@@ -2325,7 +2325,7 @@
               "type": "string"
             },
             "speed": {
-              "description": "Body param: The inference speed mode for this request. `\"fast\"` enables high output-tokens-per-second inference.",
+              "description": "Body param: The inference speed mode for this request. `\"fast\"` enables high output-tokens-per-second inference.\n\nSome models require the `fast-mode-2026-02-01` beta header for any `speed` value. See [fast mode](https://platform.claude.com/docs/en/build-with-claude/fast-mode) for which models.",
               "enum": [
                 "standard",
                 "fast",
@@ -2546,7 +2546,7 @@
               "type": "string"
             },
             "speed": {
-              "description": "Body param: The inference speed mode for this request. `\"fast\"` enables high output-tokens-per-second inference.",
+              "description": "Body param: The inference speed mode for this request. `\"fast\"` enables high output-tokens-per-second inference.\n\nSome models require the `fast-mode-2026-02-01` beta header for any `speed` value. See [fast mode](https://platform.claude.com/docs/en/build-with-claude/fast-mode) for which models.",
               "enum": [
                 "standard",
                 "fast",
@@ -3088,9 +3088,13 @@
               "$ref": "#/definitions/BetaCapabilitySupport",
               "description": "Whether the model accepts thinking with type 'adaptive' (the model decides whether and how much to think)."
             },
+            "between_tools": {
+              "$ref": "#/definitions/BetaCapabilitySupport",
+              "description": "Whether the model accepts thinking with type 'between_tools' (thinking turned off, and any short progress updates the model writes between tool calls come back as thinking blocks). False exactly when a request that sends it gets a 400 from this model. A request that sends 'between_tools' can still be rejected for another reason, such as an effort level the model does not allow with thinking off."
+            },
             "disabled": {
               "$ref": "#/definitions/BetaCapabilitySupport",
-              "description": "Whether the model accepts thinking with type 'disabled' (thinking turned off). False exactly when a request that sends it gets a 400 from this model. True on a model that does not support thinking."
+              "description": "Whether the model accepts thinking with type 'disabled' (thinking turned off). False exactly when a request that sends it gets a 400 from this model. True on a model that does not support thinking. A request that sends 'disabled' can still be rejected for another reason, such as an effort level the model does not allow with thinking off."
             },
             "enabled": {
               "$ref": "#/definitions/BetaCapabilitySupport",
@@ -3099,6 +3103,7 @@
           },
           "required": [
             "adaptive",
+            "between_tools",
             "disabled",
             "enabled"
           ],
@@ -5103,6 +5108,18 @@
                 "string",
                 "null"
               ]
+            },
+            "speed": {
+              "description": "The inference speed mode used for this request.",
+              "enum": [
+                "standard",
+                "fast",
+                null
+              ],
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "required": [
@@ -5114,7 +5131,8 @@
             "output_tokens",
             "output_tokens_details",
             "server_tool_use",
-            "service_tier"
+            "service_tier",
+            "speed"
           ],
           "type": "object"
         }
@@ -5185,6 +5203,18 @@
             "output_config": {
               "$ref": "#/definitions/OutputConfig",
               "description": "Body param: Configuration options for the model's output, such as the output format."
+            },
+            "speed": {
+              "description": "Body param: The inference speed mode for this request. `\"fast\"` enables high output-tokens-per-second inference.\n\nSome models require the `fast-mode-2026-02-01` beta header for any `speed` value. See [fast mode](https://platform.claude.com/docs/en/build-with-claude/fast-mode) for which models.",
+              "enum": [
+                "standard",
+                "fast",
+                null
+              ],
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "system": {
               "anyOf": [
@@ -5794,6 +5824,18 @@
               ],
               "type": "string"
             },
+            "speed": {
+              "description": "Body param: The inference speed mode for this request. `\"fast\"` enables high output-tokens-per-second inference.\n\nSome models require the `fast-mode-2026-02-01` beta header for any `speed` value. See [fast mode](https://platform.claude.com/docs/en/build-with-claude/fast-mode) for which models.",
+              "enum": [
+                "standard",
+                "fast",
+                null
+              ],
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "stop_sequences": {
               "description": "Body param: Custom text sequences that will cause the model to stop generating.\n\nOur models will normally stop when they have naturally completed their turn, which will result in a response `stop_reason` of `\"end_turn\"`.\n\nIf you want the model to stop generating when it encounters custom strings of text, you can use the `stop_sequences` parameter. If the model encounters one of the custom sequences, the response `stop_reason` value will be `\"stop_sequence\"` and the response `stop_sequence` value will contain the matched stop sequence.",
               "items": {
@@ -5933,6 +5975,18 @@
                 "standard_only"
               ],
               "type": "string"
+            },
+            "speed": {
+              "description": "Body param: The inference speed mode for this request. `\"fast\"` enables high output-tokens-per-second inference.\n\nSome models require the `fast-mode-2026-02-01` beta header for any `speed` value. See [fast mode](https://platform.claude.com/docs/en/build-with-claude/fast-mode) for which models.",
+              "enum": [
+                "standard",
+                "fast",
+                null
+              ],
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "stop_sequences": {
               "description": "Body param: Custom text sequences that will cause the model to stop generating.\n\nOur models will normally stop when they have naturally completed their turn, which will result in a response `stop_reason` of `\"end_turn\"`.\n\nIf you want the model to stop generating when it encounters custom strings of text, you can use the `stop_sequences` parameter. If the model encounters one of the custom sequences, the response `stop_reason` value will be `\"stop_sequence\"` and the response `stop_sequence` value will contain the matched stop sequence.",
@@ -6789,9 +6843,13 @@
               "$ref": "#/definitions/CapabilitySupport",
               "description": "Whether the model accepts thinking with type 'adaptive' (the model decides whether and how much to think)."
             },
+            "between_tools": {
+              "$ref": "#/definitions/CapabilitySupport",
+              "description": "Whether the model accepts thinking with type 'between_tools' (thinking turned off, and any short progress updates the model writes between tool calls come back as thinking blocks). False exactly when a request that sends it gets a 400 from this model. A request that sends 'between_tools' can still be rejected for another reason, such as an effort level the model does not allow with thinking off."
+            },
             "disabled": {
               "$ref": "#/definitions/CapabilitySupport",
-              "description": "Whether the model accepts thinking with type 'disabled' (thinking turned off). False exactly when a request that sends it gets a 400 from this model. True on a model that does not support thinking."
+              "description": "Whether the model accepts thinking with type 'disabled' (thinking turned off). False exactly when a request that sends it gets a 400 from this model. True on a model that does not support thinking. A request that sends 'disabled' can still be rejected for another reason, such as an effort level the model does not allow with thinking off."
             },
             "enabled": {
               "$ref": "#/definitions/CapabilitySupport",
@@ -6800,6 +6858,7 @@
           },
           "required": [
             "adaptive",
+            "between_tools",
             "disabled",
             "enabled"
           ],
@@ -7847,6 +7906,18 @@
                 "string",
                 "null"
               ]
+            },
+            "speed": {
+              "description": "The inference speed mode used for this request.",
+              "enum": [
+                "standard",
+                "fast",
+                null
+              ],
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "required": [
@@ -7858,7 +7929,8 @@
             "output_tokens",
             "output_tokens_details",
             "server_tool_use",
-            "service_tier"
+            "service_tier",
+            "speed"
           ],
           "type": "object"
         }

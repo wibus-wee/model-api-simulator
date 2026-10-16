@@ -374,4 +374,52 @@ describe('openAI routes', () => {
     expect(controller.requests()).toHaveLength(1)
     controller.assertExhausted()
   })
+
+  it('streams a retrieved response when stream=true', async () => {
+    const runtime = createSimulatorRuntime()
+    const { controller } = runtime
+    controller.enqueue({
+      provider: 'openai',
+      exchanges: [{
+        label: 'retrieve response as stream',
+        request: { method: 'GET', path: '/v1/responses/resp_1', query: { stream: 'true' } },
+        response: {
+          kind: 'stream',
+          steps: [
+            {
+              kind: 'event',
+              event: {
+                type: 'response.created',
+                sequence_number: 0,
+                response: { ...responseFixture, status: 'in_progress' },
+              },
+            },
+            {
+              kind: 'event',
+              event: {
+                type: 'response.completed',
+                sequence_number: 1,
+                response: responseFixture,
+              },
+            },
+            { kind: 'close' },
+          ],
+        },
+      }],
+    })
+
+    const response = await createSimulatorApp(runtime).handle(
+      new Request('http://simulator/v1/responses/resp_1?stream=true', {
+        method: 'GET',
+        headers,
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toContain('text/event-stream')
+    const body = await response.text()
+    expect(body).toContain('"type":"response.created"')
+    expect(body).toContain('"type":"response.completed"')
+    controller.assertExhausted()
+  })
 })
