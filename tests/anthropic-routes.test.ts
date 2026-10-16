@@ -29,6 +29,7 @@ const stableMessage = {
     output_tokens_details: null,
     server_tool_use: null,
     service_tier: null,
+    speed: null,
   },
 } as const
 
@@ -41,6 +42,59 @@ const validRequest = {
 const validCountRequest = {
   model: 'claude-test',
   messages: [{ role: 'user', content: 'hello' }],
+} as const
+
+const supported = { supported: true }
+const unsupported = { supported: false }
+const betaModel = {
+  id: 'claude-test',
+  type: 'model',
+  display_name: 'Claude Test',
+  created_at: '2026-01-01T00:00:00Z',
+  deprecated_at: null,
+  lifecycle: 'active',
+  line: 'sonnet',
+  max_input_tokens: 200_000,
+  max_tokens: 8_192,
+  retires_at: null,
+  allowed_fallback_models: null,
+  capabilities: {
+    batch: unsupported,
+    citations: unsupported,
+    code_execution: unsupported,
+    compaction: null,
+    context_management: {
+      clear_thinking_20251015: null,
+      clear_tool_uses_20250919: null,
+      compact_20260112: null,
+      supported: false,
+    },
+    effort: {
+      high: unsupported,
+      low: supported,
+      max: unsupported,
+      medium: supported,
+      supported: true,
+      xhigh: null,
+    },
+    image_input: supported,
+    pdf_input: unsupported,
+    server_tools: {
+      code_execution: unsupported,
+      supported: false,
+      web_search: unsupported,
+    },
+    structured_outputs: unsupported,
+    thinking: {
+      supported: true,
+      types: {
+        adaptive: supported,
+        between_tools: supported,
+        disabled: unsupported,
+        enabled: supported,
+      },
+    },
+  },
 } as const
 
 describe('anthropic routes', () => {
@@ -140,6 +194,92 @@ describe('anthropic routes', () => {
     const models = await app.handle(new Request('http://simulator/v1/models', { headers }))
     expect(models.status).toBe(200)
     controller.assertExhausted()
+  })
+
+  it('enforces the required usage.speed field in message responses', async () => {
+    const runtime = createSimulatorRuntime()
+    runtime.controller.enqueue({
+      provider: 'anthropic',
+      exchanges: [{
+        label: 'response missing required speed',
+        request: { method: 'POST', path: '/v1/messages' },
+        response: {
+          kind: 'json',
+          body: {
+            ...stableMessage,
+            usage: Object.fromEntries(
+              Object.entries(stableMessage.usage).filter(([key]) => key !== 'speed'),
+            ),
+          },
+        },
+      }],
+    })
+
+    const response = await createSimulatorApp(runtime).handle(
+      new Request('http://simulator/v1/messages', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(validRequest),
+      }),
+    )
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({
+      error: { type: 'invalid_request_error', message: expect.stringContaining("usage must have required property 'speed'") },
+    })
+    runtime.controller.assertExhausted()
+  })
+
+  it('accepts beta model metadata with thinking.between_tools and rejects omissions', async () => {
+    const runtime = createSimulatorRuntime()
+    runtime.controller.enqueue({
+      provider: 'anthropic',
+      exchanges: [
+        {
+          label: 'beta model metadata',
+          request: { method: 'GET', path: '/v1/models/claude-test' },
+          response: { kind: 'json', body: betaModel },
+        },
+        {
+          label: 'beta model missing between_tools capability',
+          request: { method: 'GET', path: '/v1/models/claude-test' },
+          response: {
+            kind: 'json',
+            body: {
+              ...betaModel,
+              capabilities: {
+                ...betaModel.capabilities,
+                thinking: {
+                  ...betaModel.capabilities.thinking,
+                  types: {
+                    adaptive: supported,
+                    disabled: unsupported,
+                    enabled: supported,
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+    })
+    const app = createSimulatorApp(runtime)
+    const request = () => new Request('http://simulator/v1/models/claude-test?beta=true', {
+      headers: { ...headers, 'anthropic-beta': 'test-beta' },
+    })
+
+    const accepted = await app.handle(request())
+    expect(accepted.status).toBe(200)
+    expect(await accepted.json()).toMatchObject({
+      capabilities: { thinking: { types: { between_tools: { supported: true } } } },
+    })
+
+    const rejected = await app.handle(request())
+    expect(rejected.status).toBe(400)
+    expect(await rejected.json()).toMatchObject({
+      error: { type: 'invalid_request_error', message: expect.stringContaining("must have required property 'between_tools'") },
+    })
+    runtime.controller.assertExhausted()
   })
 
   it('emits named SSE frames and rejects excluded variants before streaming', async () => {

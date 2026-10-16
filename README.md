@@ -19,8 +19,9 @@ The package supports:
   list/retrieve.
 - Anthropic text, ordinary `tool_use`, thinking, redacted thinking, ping,
   stream error, and disconnect flows.
-- OpenAI Responses create (JSON and SSE), retrieve, cancel, delete, input
-  items, input-token count, compact, and model list/retrieve.
+- OpenAI Responses create (JSON and SSE), retrieve (JSON and `stream=true` SSE),
+  cancel, delete, input items, input-token count, compact, and model
+  list/retrieve.
 - OpenAI text, refusal, reasoning, ordinary function call, lifecycle, error,
   and disconnect flows.
 
