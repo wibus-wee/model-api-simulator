@@ -145,6 +145,41 @@ describe('protocol profile and operation registry', () => {
     expect(sources.join('\n')).not.toContain('normalizeIdentity')
   })
 
+  it('records the reviewed OpenAI model-id and response-error contract changes', () => {
+    const schemas = new JsonSchemaRegistry()
+
+    // ModelIdsShared is a string-or-enum union. The enum carries discovery and
+    // deprecation metadata, while the string branch keeps future model IDs valid.
+    for (const name of ['ModelIdsShared', 'BetaModelIdsShared'] as const) {
+      const modelIdSchema = openAiDocument.components.schemas[name]
+      expect(() => schemas.validateOpenAiSchema(modelIdSchema, 'future-model-id', name)).not.toThrow()
+      expect(() => schemas.validateOpenAiSchema(modelIdSchema, 42, name)).toThrow()
+    }
+
+    // The upstream ResponseError schemas now type optional `param` and `type`.
+    // Keep positive nullable/string witnesses and reject values previously
+    // admitted only because these properties were undeclared.
+    for (const name of ['ResponseError', 'BetaResponseError'] as const) {
+      const responseErrorSchema = openAiDocument.components.schemas[name]
+      for (const [param, type] of [[null, null], ['/input', 'invalid_request_error']] as const) {
+        expect(() => schemas.validateOpenAiSchema(responseErrorSchema, {
+          code: 'server_error',
+          message: 'fixture failure',
+          param,
+          type,
+        }, name)).not.toThrow()
+      }
+      expect(() => schemas.validateOpenAiSchema(responseErrorSchema, {
+        code: 'server_error',
+        message: 'fixture failure',
+        param: 7,
+      }, name)).toThrow()
+      expect(() => schemas.validateOpenAiSchema(responseErrorSchema, {
+        code: 'server_error',
+      }, name)).toThrow()
+    }
+  })
+
   it('binds protocol manifests and the Anthropic SDK alias to lockfile integrity', async () => {
     const [
       coreScope,
