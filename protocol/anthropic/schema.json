@@ -744,7 +744,8 @@
                 "mcp-client-2026-09-15",
                 "ce-plugins-2026-09-01",
                 "spend-limit-reads-2026-09-26",
-                "telemetry-destinations-2026-08-11"
+                "telemetry-destinations-2026-08-11",
+                "webhooks-2026-10-07"
               ],
               "type": "string"
             }
@@ -752,6 +753,23 @@
         },
         "AnthropicBetaMessageCountTokensParams": {
           "$ref": "#/definitions/MessageCountTokensParams"
+        },
+        "BetaAssistantMessageParam": {
+          "additionalProperties": false,
+          "properties": {
+            "content": {
+              "$ref": "#/definitions/BetaMessageContentParam"
+            },
+            "role": {
+              "const": "assistant",
+              "type": "string"
+            }
+          },
+          "required": [
+            "content",
+            "role"
+          ],
+          "type": "object"
         },
         "BetaContentBlockParam": {
           "anyOf": [
@@ -797,59 +815,31 @@
           ],
           "type": "object"
         },
-        "BetaMessageParam": {
-          "additionalProperties": false,
-          "properties": {
-            "clear_at": {
-              "description": "How long this system message's text stays in front of the model. `\"never\"` (the default) renders it on every request that includes it. `\"next_user_message\"` renders it only for the user turn it follows: once a later `role: \"user\"` message exists in `messages` the message stays in the array (send it unchanged) but is no longer shown to the model. Only permitted on `role: \"system\"` messages.",
-              "enum": [
-                "next_user_message",
-                "never",
-                null
-              ],
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "content": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "items": {
-                    "$ref": "#/definitions/BetaContentBlockParam"
-                  },
-                  "type": "array"
-                }
-              ]
-            },
-            "output_config": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/BetaSystemMessageOutputConfig"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Per-message output configuration on a role:\"system\" input message.\n\nFields here apply per-turn; `format` remains top-level only. An empty `{}` is accepted on a message that carries content; a message with neither content nor output_config fields is rejected."
-            },
-            "role": {
-              "enum": [
-                "user",
-                "assistant",
-                "system"
-              ],
+        "BetaMessageContentParam": {
+          "anyOf": [
+            {
               "type": "string"
+            },
+            {
+              "items": {
+                "$ref": "#/definitions/BetaContentBlockParam"
+              },
+              "type": "array"
             }
-          },
-          "required": [
-            "content",
-            "role"
-          ],
-          "type": "object"
+          ]
+        },
+        "BetaMessageParam": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/BetaUserMessageParam"
+            },
+            {
+              "$ref": "#/definitions/BetaAssistantMessageParam"
+            },
+            {
+              "$ref": "#/definitions/BetaSystemMessageParam"
+            }
+          ]
         },
         "BetaOutputConfig": {
           "additionalProperties": false,
@@ -988,6 +978,59 @@
               ]
             }
           },
+          "type": "object"
+        },
+        "BetaSystemMessageParam": {
+          "additionalProperties": false,
+          "properties": {
+            "clear_at": {
+              "description": "How long this system message's text stays in front of the model. `\"never\"` (the default) renders it on every request that includes it. `\"next_user_message\"` renders it only for the user turn it follows: once a later `role: \"user\"` message exists in `messages` the message stays in the array (send it unchanged) but is no longer shown to the model. Only permitted on `role: \"system\"` messages.",
+              "enum": [
+                "next_user_message",
+                "never",
+                null
+              ],
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "content": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/definitions/BetaTextBlockParam"
+                      }
+                    ]
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "output_config": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BetaSystemMessageOutputConfig"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Per-message output configuration on a role:\"system\" input message.\n\nFields here apply per-turn; `format` remains top-level only. An empty `{}` is accepted on a message that carries content; a message with neither content nor output_config fields is rejected."
+            },
+            "role": {
+              "const": "system",
+              "type": "string"
+            }
+          },
+          "required": [
+            "role"
+          ],
           "type": "object"
         },
         "BetaTextBlockParam": {
@@ -1260,6 +1303,23 @@
           ],
           "type": "object"
         },
+        "BetaUserMessageParam": {
+          "additionalProperties": false,
+          "properties": {
+            "content": {
+              "$ref": "#/definitions/BetaMessageContentParam"
+            },
+            "role": {
+              "const": "user",
+              "type": "string"
+            }
+          },
+          "required": [
+            "content",
+            "role"
+          ],
+          "type": "object"
+        },
         "MessageCountTokensParams": {
           "additionalProperties": false,
           "properties": {
@@ -1305,7 +1365,7 @@
               "type": "array"
             },
             "messages": {
-              "description": "Body param: Input messages.\n\nOur models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.\n\nEach input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.\n\nIf the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).\n\nExample with a single `user` message:\n\n```json [{ \"role\": \"user\", \"content\": \"Hello, Claude\" }] ```\n\nExample with multiple conversational turns:\n\n```json [   { \"role\": \"user\", \"content\": \"Hello there.\" },   { \"role\": \"assistant\", \"content\": \"Hi, I'm Claude. How can I help you?\" },   { \"role\": \"user\", \"content\": \"Can you explain LLMs in plain English?\" } ] ```\n\nExample with a partially-filled response from Claude, for models that support prefill:\n\n```json [   {     \"role\": \"user\",     \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"   },   { \"role\": \"assistant\", \"content\": \"The best answer is (\" } ] ```\n\nEach input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `\"text\"`. The following input messages are equivalent:\n\n```json { \"role\": \"user\", \"content\": \"Hello, Claude\" } ```\n\n```json { \"role\": \"user\", \"content\": [{ \"type\": \"text\", \"text\": \"Hello, Claude\" }] } ```\n\nSee [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).\n\nNote that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter — there is no `\"system\"` role for input messages in the Messages API.\n\nThere is a limit of 100,000 messages in a single request.",
+              "description": "Body param: Input messages.\n\nOur models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.\n\nEach input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.\n\nIf the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).\n\nExample with a single `user` message:\n\n```json [{ \"role\": \"user\", \"content\": \"Hello, Claude\" }] ```\n\nExample with multiple conversational turns:\n\n```json [   { \"role\": \"user\", \"content\": \"Hello there.\" },   { \"role\": \"assistant\", \"content\": \"Hi, I'm Claude. How can I help you?\" },   { \"role\": \"user\", \"content\": \"Can you explain LLMs in plain English?\" } ] ```\n\nExample with a partially-filled response from Claude, for models that support prefill:\n\n```json [   {     \"role\": \"user\",     \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"   },   { \"role\": \"assistant\", \"content\": \"The best answer is (\" } ] ```\n\nEach input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `\"text\"`. The following input messages are equivalent:\n\n```json { \"role\": \"user\", \"content\": \"Hello, Claude\" } ```\n\n```json { \"role\": \"user\", \"content\": [{ \"type\": \"text\", \"text\": \"Hello, Claude\" }] } ```\n\nSee [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).\n\nNote that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter.\n\nThere is a limit of 100,000 messages in a single request.",
               "items": {
                 "$ref": "#/definitions/BetaMessageParam"
               },
@@ -1373,7 +1433,7 @@
               "type": "array"
             },
             "user_profile_id": {
-              "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization. Requires the `user-profiles` beta header.",
+              "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization.",
               "type": "string"
             },
             "workspace_id": {
@@ -1483,7 +1543,8 @@
                 "mcp-client-2026-09-15",
                 "ce-plugins-2026-09-01",
                 "spend-limit-reads-2026-09-26",
-                "telemetry-destinations-2026-08-11"
+                "telemetry-destinations-2026-08-11",
+                "webhooks-2026-10-07"
               ],
               "type": "string"
             }
@@ -1491,6 +1552,23 @@
         },
         "AnthropicBetaMessageCreateParams": {
           "$ref": "#/definitions/MessageCreateParams"
+        },
+        "BetaAssistantMessageParam": {
+          "additionalProperties": false,
+          "properties": {
+            "content": {
+              "$ref": "#/definitions/BetaMessageContentParam"
+            },
+            "role": {
+              "const": "assistant",
+              "type": "string"
+            }
+          },
+          "required": [
+            "content",
+            "role"
+          ],
+          "type": "object"
         },
         "BetaContainerParams": {
           "additionalProperties": false,
@@ -1605,6 +1683,7 @@
           "description": "One entry in the `fallbacks` chain on a `/v1/messages` request.\n\n`model` is required. The override fields (`max_tokens`, `thinking`, `output_config`, and `speed`) set the corresponding parameter for this attempt only and are validated as if the request were made to `model`. Any other key is rejected at parse time.",
           "properties": {
             "max_tokens": {
+              "description": "The `max_tokens` for the fallback attempt that uses this `fallbacks` entry's `model`, in place of the request's `max_tokens`. If you leave it out or set it to `null`, the attempt uses the request's `max_tokens`.\n\nSee the [refusals and fallback guide](https://platform.claude.com/docs/en/build-with-claude/refusals-and-fallback#naming-your-own-fallback-models) to learn more about fallback entries.",
               "type": [
                 "number",
                 "null"
@@ -1622,10 +1701,11 @@
                 {
                   "type": "null"
                 }
-              ]
+              ],
+              "description": "Output parameters for the fallback attempt that uses this `fallbacks` entry's `model`, combined with the request's `output_config` one field at a time.\n\n- `format`: If you leave it out, the attempt uses the request's `format`. If you   set it to `null`, the attempt runs without a format.\n- `effort`: If you leave it out, the attempt uses the request's `effort` when   `model` supports that level with the attempt's `thinking`. If the request   doesn't set `effort`, if `model` doesn't support the level, or if you set   `effort` to `null`, the attempt runs at the default effort of `model`.\n- `task_budget`: If you leave it out, the attempt uses the request's   `task_budget` when `model` accepts a task budget of that size. If the request   doesn't set `task_budget`, if `model` doesn't accept it, or if you set   `task_budget` to `null`, the attempt runs without a task budget.\n\nSet `output_config` to `null` to run the attempt without a format or a task budget, at the default effort of `model`.\n\nThese rules apply with the `server-side-fallback-2026-07-01` beta header."
             },
             "speed": {
-              "description": "Inference speed mode. `fast` provides significantly faster output token generation at premium pricing. Not all models support `fast`; invalid combinations are rejected at create time.",
+              "description": "The inference speed mode for the fallback attempt that uses this `fallbacks` entry's `model`. If you leave it out, the attempt runs at `fast` speed only when the request sets `speed` to `fast` and your organization can use fast mode on `model`.\n\nOtherwise, or when you set this field to `null`, the attempt runs at `standard` speed.\n\nThese rules apply with the `server-side-fallback-2026-07-01` beta header.",
               "enum": [
                 "standard",
                 "fast",
@@ -1641,7 +1721,8 @@
                 {
                   "type": "null"
                 }
-              ]
+              ],
+              "description": "The thinking configuration for the fallback attempt that uses this `fallbacks` entry's `model`. If you leave it out, the attempt uses the request's `thinking` when `model` supports that thinking `type`.\n\nIf you leave it out and the request's thinking `type` is `between_tools` but `model` doesn't support `between_tools`, the attempt uses `disabled` if `model` supports it. Otherwise, if `model` doesn't support the request's thinking `type`, if the request doesn't set `thinking`, or if you set this field to `null`, the attempt uses the thinking `type` that `model` uses when a request leaves out `thinking`. The request's `thinking.display` still applies where `model` allows it.\n\nThese rules apply with the `server-side-fallback-2026-07-01` beta header."
             }
           },
           "required": [
@@ -1664,59 +1745,31 @@
           ],
           "description": "Opt-in server-side retry on one or more substitute models when the requested model declines for policy reasons. Tried in order: if the first entry also declines, the second is tried, and so on. Some models don't support fallbacks; on those models, a list of fallback models returns a 400 error. See [Server-side fallback](https://platform.claude.com/docs/en/build-with-claude/refusals-and-fallback#server-side-fallback). The string \"default\" requests the requested model's server-defined default fallback configuration. On a model that doesn't support fallbacks, the request runs on the requested model alone, so a declined request stays declined."
         },
-        "BetaMessageParam": {
-          "additionalProperties": false,
-          "properties": {
-            "clear_at": {
-              "description": "How long this system message's text stays in front of the model. `\"never\"` (the default) renders it on every request that includes it. `\"next_user_message\"` renders it only for the user turn it follows: once a later `role: \"user\"` message exists in `messages` the message stays in the array (send it unchanged) but is no longer shown to the model. Only permitted on `role: \"system\"` messages.",
-              "enum": [
-                "next_user_message",
-                "never",
-                null
-              ],
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "content": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "items": {
-                    "$ref": "#/definitions/BetaContentBlockParam"
-                  },
-                  "type": "array"
-                }
-              ]
-            },
-            "output_config": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/BetaSystemMessageOutputConfig"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Per-message output configuration on a role:\"system\" input message.\n\nFields here apply per-turn; `format` remains top-level only. An empty `{}` is accepted on a message that carries content; a message with neither content nor output_config fields is rejected."
-            },
-            "role": {
-              "enum": [
-                "user",
-                "assistant",
-                "system"
-              ],
+        "BetaMessageContentParam": {
+          "anyOf": [
+            {
               "type": "string"
+            },
+            {
+              "items": {
+                "$ref": "#/definitions/BetaContentBlockParam"
+              },
+              "type": "array"
             }
-          },
-          "required": [
-            "content",
-            "role"
-          ],
-          "type": "object"
+          ]
+        },
+        "BetaMessageParam": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/BetaUserMessageParam"
+            },
+            {
+              "$ref": "#/definitions/BetaAssistantMessageParam"
+            },
+            {
+              "$ref": "#/definitions/BetaSystemMessageParam"
+            }
+          ]
         },
         "BetaMetadata": {
           "additionalProperties": false,
@@ -1895,6 +1948,59 @@
               ]
             }
           },
+          "type": "object"
+        },
+        "BetaSystemMessageParam": {
+          "additionalProperties": false,
+          "properties": {
+            "clear_at": {
+              "description": "How long this system message's text stays in front of the model. `\"never\"` (the default) renders it on every request that includes it. `\"next_user_message\"` renders it only for the user turn it follows: once a later `role: \"user\"` message exists in `messages` the message stays in the array (send it unchanged) but is no longer shown to the model. Only permitted on `role: \"system\"` messages.",
+              "enum": [
+                "next_user_message",
+                "never",
+                null
+              ],
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "content": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/definitions/BetaTextBlockParam"
+                      }
+                    ]
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "output_config": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BetaSystemMessageOutputConfig"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Per-message output configuration on a role:\"system\" input message.\n\nFields here apply per-turn; `format` remains top-level only. An empty `{}` is accepted on a message that carries content; a message with neither content nor output_config fields is rejected."
+            },
+            "role": {
+              "const": "system",
+              "type": "string"
+            }
+          },
+          "required": [
+            "role"
+          ],
           "type": "object"
         },
         "BetaTextBlockParam": {
@@ -2174,6 +2280,23 @@
           ],
           "type": "object"
         },
+        "BetaUserMessageParam": {
+          "additionalProperties": false,
+          "properties": {
+            "content": {
+              "$ref": "#/definitions/BetaMessageContentParam"
+            },
+            "role": {
+              "const": "user",
+              "type": "string"
+            }
+          },
+          "required": [
+            "content",
+            "role"
+          ],
+          "type": "object"
+        },
         "MessageCreateParams": {
           "anyOf": [
             {
@@ -2290,7 +2413,7 @@
               "type": "array"
             },
             "messages": {
-              "description": "Body param: Input messages.\n\nOur models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.\n\nEach input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.\n\nIf the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).\n\nExample with a single `user` message:\n\n```json [{ \"role\": \"user\", \"content\": \"Hello, Claude\" }] ```\n\nExample with multiple conversational turns:\n\n```json [   { \"role\": \"user\", \"content\": \"Hello there.\" },   { \"role\": \"assistant\", \"content\": \"Hi, I'm Claude. How can I help you?\" },   { \"role\": \"user\", \"content\": \"Can you explain LLMs in plain English?\" } ] ```\n\nExample with a partially-filled response from Claude, for models that support prefill:\n\n```json [   {     \"role\": \"user\",     \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"   },   { \"role\": \"assistant\", \"content\": \"The best answer is (\" } ] ```\n\nEach input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `\"text\"`. The following input messages are equivalent:\n\n```json { \"role\": \"user\", \"content\": \"Hello, Claude\" } ```\n\n```json { \"role\": \"user\", \"content\": [{ \"type\": \"text\", \"text\": \"Hello, Claude\" }] } ```\n\nSee [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).\n\nNote that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter — there is no `\"system\"` role for input messages in the Messages API.\n\nThere is a limit of 100,000 messages in a single request.",
+              "description": "Body param: Input messages.\n\nOur models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.\n\nEach input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.\n\nIf the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).\n\nExample with a single `user` message:\n\n```json [{ \"role\": \"user\", \"content\": \"Hello, Claude\" }] ```\n\nExample with multiple conversational turns:\n\n```json [   { \"role\": \"user\", \"content\": \"Hello there.\" },   { \"role\": \"assistant\", \"content\": \"Hi, I'm Claude. How can I help you?\" },   { \"role\": \"user\", \"content\": \"Can you explain LLMs in plain English?\" } ] ```\n\nExample with a partially-filled response from Claude, for models that support prefill:\n\n```json [   {     \"role\": \"user\",     \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"   },   { \"role\": \"assistant\", \"content\": \"The best answer is (\" } ] ```\n\nEach input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `\"text\"`. The following input messages are equivalent:\n\n```json { \"role\": \"user\", \"content\": \"Hello, Claude\" } ```\n\n```json { \"role\": \"user\", \"content\": [{ \"type\": \"text\", \"text\": \"Hello, Claude\" }] } ```\n\nSee [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).\n\nNote that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter.\n\nThere is a limit of 100,000 messages in a single request.",
               "items": {
                 "$ref": "#/definitions/BetaMessageParam"
               },
@@ -2362,10 +2485,6 @@
               ],
               "description": "Body param: System prompt.\n\nA system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role)."
             },
-            "temperature": {
-              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not support\nsetting temperature. A value of 1.0 will be accepted for backwards\ncompatibility, all other values will be rejected with a 400 error.",
-              "type": "number"
-            },
             "thinking": {
               "$ref": "#/definitions/BetaThinkingConfigParam",
               "description": "Body param: Configuration for Claude's thinking.\n\nWith `{\"type\": \"adaptive\"}`, Claude decides when and how much to think. With `{\"type\": \"enabled\"}` (manual extended thinking), you set a `budget_tokens` of at least 1,024. Thinking tokens count toward your `max_tokens` limit.\n\nWhich `type` values are accepted, and what happens when you omit `thinking`, depend on the model. See [thinking](https://platform.claude.com/docs/en/build-with-claude/thinking#configuring-thinking) for each model's behavior."
@@ -2381,16 +2500,8 @@
               },
               "type": "array"
             },
-            "top_k": {
-              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not accept\ntop_k; any value will be rejected with a 400 error.",
-              "type": "number"
-            },
-            "top_p": {
-              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not support\nsetting top_p. A value >= 0.99 will be accepted for backwards compatibility, all\nother values will be rejected with a 400 error.",
-              "type": "number"
-            },
             "user_profile_id": {
-              "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization. Requires the `user-profiles` beta header.",
+              "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization.",
               "type": "string"
             },
             "workspace_id": {
@@ -2511,7 +2622,7 @@
               "type": "array"
             },
             "messages": {
-              "description": "Body param: Input messages.\n\nOur models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.\n\nEach input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.\n\nIf the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).\n\nExample with a single `user` message:\n\n```json [{ \"role\": \"user\", \"content\": \"Hello, Claude\" }] ```\n\nExample with multiple conversational turns:\n\n```json [   { \"role\": \"user\", \"content\": \"Hello there.\" },   { \"role\": \"assistant\", \"content\": \"Hi, I'm Claude. How can I help you?\" },   { \"role\": \"user\", \"content\": \"Can you explain LLMs in plain English?\" } ] ```\n\nExample with a partially-filled response from Claude, for models that support prefill:\n\n```json [   {     \"role\": \"user\",     \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"   },   { \"role\": \"assistant\", \"content\": \"The best answer is (\" } ] ```\n\nEach input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `\"text\"`. The following input messages are equivalent:\n\n```json { \"role\": \"user\", \"content\": \"Hello, Claude\" } ```\n\n```json { \"role\": \"user\", \"content\": [{ \"type\": \"text\", \"text\": \"Hello, Claude\" }] } ```\n\nSee [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).\n\nNote that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter — there is no `\"system\"` role for input messages in the Messages API.\n\nThere is a limit of 100,000 messages in a single request.",
+              "description": "Body param: Input messages.\n\nOur models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.\n\nEach input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.\n\nIf the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).\n\nExample with a single `user` message:\n\n```json [{ \"role\": \"user\", \"content\": \"Hello, Claude\" }] ```\n\nExample with multiple conversational turns:\n\n```json [   { \"role\": \"user\", \"content\": \"Hello there.\" },   { \"role\": \"assistant\", \"content\": \"Hi, I'm Claude. How can I help you?\" },   { \"role\": \"user\", \"content\": \"Can you explain LLMs in plain English?\" } ] ```\n\nExample with a partially-filled response from Claude, for models that support prefill:\n\n```json [   {     \"role\": \"user\",     \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"   },   { \"role\": \"assistant\", \"content\": \"The best answer is (\" } ] ```\n\nEach input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `\"text\"`. The following input messages are equivalent:\n\n```json { \"role\": \"user\", \"content\": \"Hello, Claude\" } ```\n\n```json { \"role\": \"user\", \"content\": [{ \"type\": \"text\", \"text\": \"Hello, Claude\" }] } ```\n\nSee [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).\n\nNote that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter.\n\nThere is a limit of 100,000 messages in a single request.",
               "items": {
                 "$ref": "#/definitions/BetaMessageParam"
               },
@@ -2583,10 +2694,6 @@
               ],
               "description": "Body param: System prompt.\n\nA system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role)."
             },
-            "temperature": {
-              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not support\nsetting temperature. A value of 1.0 will be accepted for backwards\ncompatibility, all other values will be rejected with a 400 error.",
-              "type": "number"
-            },
             "thinking": {
               "$ref": "#/definitions/BetaThinkingConfigParam",
               "description": "Body param: Configuration for Claude's thinking.\n\nWith `{\"type\": \"adaptive\"}`, Claude decides when and how much to think. With `{\"type\": \"enabled\"}` (manual extended thinking), you set a `budget_tokens` of at least 1,024. Thinking tokens count toward your `max_tokens` limit.\n\nWhich `type` values are accepted, and what happens when you omit `thinking`, depend on the model. See [thinking](https://platform.claude.com/docs/en/build-with-claude/thinking#configuring-thinking) for each model's behavior."
@@ -2602,16 +2709,8 @@
               },
               "type": "array"
             },
-            "top_k": {
-              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not accept\ntop_k; any value will be rejected with a 400 error.",
-              "type": "number"
-            },
-            "top_p": {
-              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not support\nsetting top_p. A value >= 0.99 will be accepted for backwards compatibility, all\nother values will be rejected with a 400 error.",
-              "type": "number"
-            },
             "user_profile_id": {
-              "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization. Requires the `user-profiles` beta header.",
+              "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization.",
               "type": "string"
             },
             "workspace_id": {
@@ -3172,7 +3271,8 @@
                 "mcp-client-2026-09-15",
                 "ce-plugins-2026-09-01",
                 "spend-limit-reads-2026-09-26",
-                "telemetry-destinations-2026-08-11"
+                "telemetry-destinations-2026-08-11",
+                "webhooks-2026-10-07"
               ],
               "type": "string"
             }
@@ -3283,7 +3383,8 @@
                 "mcp-client-2026-09-15",
                 "ce-plugins-2026-09-01",
                 "spend-limit-reads-2026-09-26",
-                "telemetry-destinations-2026-08-11"
+                "telemetry-destinations-2026-08-11",
+                "webhooks-2026-10-07"
               ],
               "type": "string"
             }
@@ -5145,6 +5246,23 @@
         "AnthropicMessageCountTokensParams": {
           "$ref": "#/definitions/MessageCountTokensParams"
         },
+        "AssistantMessageParam": {
+          "additionalProperties": false,
+          "properties": {
+            "content": {
+              "$ref": "#/definitions/MessageContentParam"
+            },
+            "role": {
+              "const": "assistant",
+              "type": "string"
+            }
+          },
+          "required": [
+            "content",
+            "role"
+          ],
+          "type": "object"
+        },
         "ContentBlockParam": {
           "anyOf": [
             {
@@ -5178,6 +5296,19 @@
           ],
           "type": "object"
         },
+        "MessageContentParam": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "$ref": "#/definitions/ContentBlockParam"
+              },
+              "type": "array"
+            }
+          ]
+        },
         "MessageCountTokensParams": {
           "additionalProperties": false,
           "properties": {
@@ -5190,7 +5321,7 @@
               "description": "Body param: Top-level cache control automatically applies a cache_control marker to the last cacheable block in the request."
             },
             "messages": {
-              "description": "Body param: Input messages.\n\nOur models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.\n\nEach input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.\n\nIf the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).\n\nExample with a single `user` message:\n\n```json [{ \"role\": \"user\", \"content\": \"Hello, Claude\" }] ```\n\nExample with multiple conversational turns:\n\n```json [   { \"role\": \"user\", \"content\": \"Hello there.\" },   { \"role\": \"assistant\", \"content\": \"Hi, I'm Claude. How can I help you?\" },   { \"role\": \"user\", \"content\": \"Can you explain LLMs in plain English?\" } ] ```\n\nExample with a partially-filled response from Claude, for models that support prefill:\n\n```json [   {     \"role\": \"user\",     \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"   },   { \"role\": \"assistant\", \"content\": \"The best answer is (\" } ] ```\n\nEach input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `\"text\"`. The following input messages are equivalent:\n\n```json { \"role\": \"user\", \"content\": \"Hello, Claude\" } ```\n\n```json { \"role\": \"user\", \"content\": [{ \"type\": \"text\", \"text\": \"Hello, Claude\" }] } ```\n\nSee [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).\n\nNote that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter — there is no `\"system\"` role for input messages in the Messages API.\n\nThere is a limit of 100,000 messages in a single request.",
+              "description": "Body param: Input messages.\n\nOur models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.\n\nEach input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.\n\nIf the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).\n\nExample with a single `user` message:\n\n```json [{ \"role\": \"user\", \"content\": \"Hello, Claude\" }] ```\n\nExample with multiple conversational turns:\n\n```json [   { \"role\": \"user\", \"content\": \"Hello there.\" },   { \"role\": \"assistant\", \"content\": \"Hi, I'm Claude. How can I help you?\" },   { \"role\": \"user\", \"content\": \"Can you explain LLMs in plain English?\" } ] ```\n\nExample with a partially-filled response from Claude, for models that support prefill:\n\n```json [   {     \"role\": \"user\",     \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"   },   { \"role\": \"assistant\", \"content\": \"The best answer is (\" } ] ```\n\nEach input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `\"text\"`. The following input messages are equivalent:\n\n```json { \"role\": \"user\", \"content\": \"Hello, Claude\" } ```\n\n```json { \"role\": \"user\", \"content\": [{ \"type\": \"text\", \"text\": \"Hello, Claude\" }] } ```\n\nSee [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).\n\nNote that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter.\n\nThere is a limit of 100,000 messages in a single request.",
               "items": {
                 "$ref": "#/definitions/MessageParam"
               },
@@ -5246,7 +5377,7 @@
               "type": "array"
             },
             "user_profile_id": {
-              "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization. Requires the `user-profiles` beta header.",
+              "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization.",
               "type": "string"
             },
             "workspace_id": {
@@ -5268,35 +5399,17 @@
           ]
         },
         "MessageParam": {
-          "additionalProperties": false,
-          "properties": {
-            "content": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "items": {
-                    "$ref": "#/definitions/ContentBlockParam"
-                  },
-                  "type": "array"
-                }
-              ]
+          "anyOf": [
+            {
+              "$ref": "#/definitions/UserMessageParam"
             },
-            "role": {
-              "enum": [
-                "user",
-                "assistant",
-                "system"
-              ],
-              "type": "string"
+            {
+              "$ref": "#/definitions/AssistantMessageParam"
+            },
+            {
+              "$ref": "#/definitions/SystemMessageParam"
             }
-          },
-          "required": [
-            "content",
-            "role"
-          ],
-          "type": "object"
+          ]
         },
         "Model": {
           "anyOf": [
@@ -5375,6 +5488,33 @@
           "required": [
             "data",
             "type"
+          ],
+          "type": "object"
+        },
+        "SystemMessageParam": {
+          "additionalProperties": false,
+          "properties": {
+            "content": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "$ref": "#/definitions/TextBlockParam"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "role": {
+              "const": "system",
+              "type": "string"
+            }
+          },
+          "required": [
+            "content",
+            "role"
           ],
           "type": "object"
         },
@@ -5647,6 +5787,23 @@
             "type"
           ],
           "type": "object"
+        },
+        "UserMessageParam": {
+          "additionalProperties": false,
+          "properties": {
+            "content": {
+              "$ref": "#/definitions/MessageContentParam"
+            },
+            "role": {
+              "const": "user",
+              "type": "string"
+            }
+          },
+          "required": [
+            "content",
+            "role"
+          ],
+          "type": "object"
         }
       }
     },
@@ -5656,6 +5813,23 @@
       "definitions": {
         "AnthropicMessageCreateParams": {
           "$ref": "#/definitions/MessageCreateParams"
+        },
+        "AssistantMessageParam": {
+          "additionalProperties": false,
+          "properties": {
+            "content": {
+              "$ref": "#/definitions/MessageContentParam"
+            },
+            "role": {
+              "const": "assistant",
+              "type": "string"
+            }
+          },
+          "required": [
+            "content",
+            "role"
+          ],
+          "type": "object"
         },
         "ContainerParams": {
           "additionalProperties": false,
@@ -5732,6 +5906,19 @@
           ],
           "type": "object"
         },
+        "MessageContentParam": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "$ref": "#/definitions/ContentBlockParam"
+              },
+              "type": "array"
+            }
+          ]
+        },
         "MessageCreateParams": {
           "anyOf": [
             {
@@ -5798,7 +5985,7 @@
               "type": "number"
             },
             "messages": {
-              "description": "Body param: Input messages.\n\nOur models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.\n\nEach input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.\n\nIf the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).\n\nExample with a single `user` message:\n\n```json [{ \"role\": \"user\", \"content\": \"Hello, Claude\" }] ```\n\nExample with multiple conversational turns:\n\n```json [   { \"role\": \"user\", \"content\": \"Hello there.\" },   { \"role\": \"assistant\", \"content\": \"Hi, I'm Claude. How can I help you?\" },   { \"role\": \"user\", \"content\": \"Can you explain LLMs in plain English?\" } ] ```\n\nExample with a partially-filled response from Claude, for models that support prefill:\n\n```json [   {     \"role\": \"user\",     \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"   },   { \"role\": \"assistant\", \"content\": \"The best answer is (\" } ] ```\n\nEach input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `\"text\"`. The following input messages are equivalent:\n\n```json { \"role\": \"user\", \"content\": \"Hello, Claude\" } ```\n\n```json { \"role\": \"user\", \"content\": [{ \"type\": \"text\", \"text\": \"Hello, Claude\" }] } ```\n\nSee [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).\n\nNote that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter — there is no `\"system\"` role for input messages in the Messages API.\n\nThere is a limit of 100,000 messages in a single request.",
+              "description": "Body param: Input messages.\n\nOur models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.\n\nEach input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.\n\nIf the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).\n\nExample with a single `user` message:\n\n```json [{ \"role\": \"user\", \"content\": \"Hello, Claude\" }] ```\n\nExample with multiple conversational turns:\n\n```json [   { \"role\": \"user\", \"content\": \"Hello there.\" },   { \"role\": \"assistant\", \"content\": \"Hi, I'm Claude. How can I help you?\" },   { \"role\": \"user\", \"content\": \"Can you explain LLMs in plain English?\" } ] ```\n\nExample with a partially-filled response from Claude, for models that support prefill:\n\n```json [   {     \"role\": \"user\",     \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"   },   { \"role\": \"assistant\", \"content\": \"The best answer is (\" } ] ```\n\nEach input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `\"text\"`. The following input messages are equivalent:\n\n```json { \"role\": \"user\", \"content\": \"Hello, Claude\" } ```\n\n```json { \"role\": \"user\", \"content\": [{ \"type\": \"text\", \"text\": \"Hello, Claude\" }] } ```\n\nSee [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).\n\nNote that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter.\n\nThere is a limit of 100,000 messages in a single request.",
               "items": {
                 "$ref": "#/definitions/MessageParam"
               },
@@ -5862,10 +6049,6 @@
               ],
               "description": "Body param: System prompt.\n\nA system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role)."
             },
-            "temperature": {
-              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not support\nsetting temperature. A value of 1.0 will be accepted for backwards\ncompatibility, all other values will be rejected with a 400 error.",
-              "type": "number"
-            },
             "thinking": {
               "$ref": "#/definitions/ThinkingConfigParam",
               "description": "Body param: Configuration for Claude's thinking.\n\nWith `{\"type\": \"adaptive\"}`, Claude decides when and how much to think. With `{\"type\": \"enabled\"}` (manual extended thinking), you set a `budget_tokens` of at least 1,024. Thinking tokens count toward your `max_tokens` limit.\n\nWhich `type` values are accepted, and what happens when you omit `thinking`, depend on the model. See [thinking](https://platform.claude.com/docs/en/build-with-claude/thinking#configuring-thinking) for each model's behavior."
@@ -5881,16 +6064,8 @@
               },
               "type": "array"
             },
-            "top_k": {
-              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not accept\ntop_k; any value will be rejected with a 400 error.",
-              "type": "number"
-            },
-            "top_p": {
-              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not support\nsetting top_p. A value >= 0.99 will be accepted for backwards compatibility, all\nother values will be rejected with a 400 error.",
-              "type": "number"
-            },
             "user_profile_id": {
-              "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization. Requires the `user-profiles` beta header.",
+              "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization.",
               "type": "string"
             },
             "workspace_id": {
@@ -5950,7 +6125,7 @@
               "type": "number"
             },
             "messages": {
-              "description": "Body param: Input messages.\n\nOur models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.\n\nEach input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.\n\nIf the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).\n\nExample with a single `user` message:\n\n```json [{ \"role\": \"user\", \"content\": \"Hello, Claude\" }] ```\n\nExample with multiple conversational turns:\n\n```json [   { \"role\": \"user\", \"content\": \"Hello there.\" },   { \"role\": \"assistant\", \"content\": \"Hi, I'm Claude. How can I help you?\" },   { \"role\": \"user\", \"content\": \"Can you explain LLMs in plain English?\" } ] ```\n\nExample with a partially-filled response from Claude, for models that support prefill:\n\n```json [   {     \"role\": \"user\",     \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"   },   { \"role\": \"assistant\", \"content\": \"The best answer is (\" } ] ```\n\nEach input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `\"text\"`. The following input messages are equivalent:\n\n```json { \"role\": \"user\", \"content\": \"Hello, Claude\" } ```\n\n```json { \"role\": \"user\", \"content\": [{ \"type\": \"text\", \"text\": \"Hello, Claude\" }] } ```\n\nSee [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).\n\nNote that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter — there is no `\"system\"` role for input messages in the Messages API.\n\nThere is a limit of 100,000 messages in a single request.",
+              "description": "Body param: Input messages.\n\nOur models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.\n\nEach input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.\n\nIf the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response. This is called prefill. On models that don't support prefill, creating a message that ends with a partial `assistant` response returns a 400 error. See [Prefill not supported](https://platform.claude.com/docs/en/api/errors#prefill-not-supported).\n\nExample with a single `user` message:\n\n```json [{ \"role\": \"user\", \"content\": \"Hello, Claude\" }] ```\n\nExample with multiple conversational turns:\n\n```json [   { \"role\": \"user\", \"content\": \"Hello there.\" },   { \"role\": \"assistant\", \"content\": \"Hi, I'm Claude. How can I help you?\" },   { \"role\": \"user\", \"content\": \"Can you explain LLMs in plain English?\" } ] ```\n\nExample with a partially-filled response from Claude, for models that support prefill:\n\n```json [   {     \"role\": \"user\",     \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"   },   { \"role\": \"assistant\", \"content\": \"The best answer is (\" } ] ```\n\nEach input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `\"text\"`. The following input messages are equivalent:\n\n```json { \"role\": \"user\", \"content\": \"Hello, Claude\" } ```\n\n```json { \"role\": \"user\", \"content\": [{ \"type\": \"text\", \"text\": \"Hello, Claude\" }] } ```\n\nSee [input examples](https://platform.claude.com/docs/en/build-with-claude/working-with-messages).\n\nNote that if you want to include a [system prompt](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role), you can use the top-level `system` parameter.\n\nThere is a limit of 100,000 messages in a single request.",
               "items": {
                 "$ref": "#/definitions/MessageParam"
               },
@@ -6014,10 +6189,6 @@
               ],
               "description": "Body param: System prompt.\n\nA system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role)."
             },
-            "temperature": {
-              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not support\nsetting temperature. A value of 1.0 will be accepted for backwards\ncompatibility, all other values will be rejected with a 400 error.",
-              "type": "number"
-            },
             "thinking": {
               "$ref": "#/definitions/ThinkingConfigParam",
               "description": "Body param: Configuration for Claude's thinking.\n\nWith `{\"type\": \"adaptive\"}`, Claude decides when and how much to think. With `{\"type\": \"enabled\"}` (manual extended thinking), you set a `budget_tokens` of at least 1,024. Thinking tokens count toward your `max_tokens` limit.\n\nWhich `type` values are accepted, and what happens when you omit `thinking`, depend on the model. See [thinking](https://platform.claude.com/docs/en/build-with-claude/thinking#configuring-thinking) for each model's behavior."
@@ -6033,16 +6204,8 @@
               },
               "type": "array"
             },
-            "top_k": {
-              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not accept\ntop_k; any value will be rejected with a 400 error.",
-              "type": "number"
-            },
-            "top_p": {
-              "deprecated": "Deprecated. Models released after Claude Opus 4.6 do not support\nsetting top_p. A value >= 0.99 will be accepted for backwards compatibility, all\nother values will be rejected with a 400 error.",
-              "type": "number"
-            },
             "user_profile_id": {
-              "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization. Requires the `user-profiles` beta header.",
+              "description": "Header param: The user profile ID to attribute this request to. Use when acting on behalf of a party other than your organization.",
               "type": "string"
             },
             "workspace_id": {
@@ -6059,35 +6222,17 @@
           "type": "object"
         },
         "MessageParam": {
-          "additionalProperties": false,
-          "properties": {
-            "content": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "items": {
-                    "$ref": "#/definitions/ContentBlockParam"
-                  },
-                  "type": "array"
-                }
-              ]
+          "anyOf": [
+            {
+              "$ref": "#/definitions/UserMessageParam"
             },
-            "role": {
-              "enum": [
-                "user",
-                "assistant",
-                "system"
-              ],
-              "type": "string"
+            {
+              "$ref": "#/definitions/AssistantMessageParam"
+            },
+            {
+              "$ref": "#/definitions/SystemMessageParam"
             }
-          },
-          "required": [
-            "content",
-            "role"
-          ],
-          "type": "object"
+          ]
         },
         "Metadata": {
           "additionalProperties": false,
@@ -6206,6 +6351,33 @@
           "required": [
             "skill_id",
             "type"
+          ],
+          "type": "object"
+        },
+        "SystemMessageParam": {
+          "additionalProperties": false,
+          "properties": {
+            "content": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "$ref": "#/definitions/TextBlockParam"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "role": {
+              "const": "system",
+              "type": "string"
+            }
+          },
+          "required": [
+            "content",
+            "role"
           ],
           "type": "object"
         },
@@ -6483,6 +6655,23 @@
             "input",
             "name",
             "type"
+          ],
+          "type": "object"
+        },
+        "UserMessageParam": {
+          "additionalProperties": false,
+          "properties": {
+            "content": {
+              "$ref": "#/definitions/MessageContentParam"
+            },
+            "role": {
+              "const": "user",
+              "type": "string"
+            }
+          },
+          "required": [
+            "content",
+            "role"
           ],
           "type": "object"
         }
@@ -6870,69 +7059,6 @@
       "$ref": "#/definitions/AnthropicModelListParams",
       "$schema": "http://json-schema.org/draft-07/schema#",
       "definitions": {
-        "AnthropicBeta": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "enum": [
-                "message-batches-2024-09-24",
-                "prompt-caching-2024-07-31",
-                "computer-use-2024-10-22",
-                "computer-use-2025-01-24",
-                "pdfs-2024-09-25",
-                "token-counting-2024-11-01",
-                "token-efficient-tools-2025-02-19",
-                "output-128k-2025-02-19",
-                "files-api-2025-04-14",
-                "mcp-client-2025-04-04",
-                "mcp-client-2025-11-20",
-                "dev-full-thinking-2025-05-14",
-                "interleaved-thinking-2025-05-14",
-                "code-execution-2025-05-22",
-                "extended-cache-ttl-2025-04-11",
-                "context-1m-2025-08-07",
-                "context-management-2025-06-27",
-                "model-context-window-exceeded-2025-08-26",
-                "skills-2025-10-02",
-                "fast-mode-2026-02-01",
-                "output-300k-2026-03-24",
-                "user-profiles-2026-03-24",
-                "user-profiles-2026-08-18",
-                "user-profiles-2026-09-04",
-                "advisor-tool-2026-03-01",
-                "managed-agents-2026-04-01",
-                "cache-diagnosis-2026-04-07",
-                "dreaming-2026-04-21",
-                "thinking-token-count-2026-05-13",
-                "server-side-fallback-2026-06-01",
-                "server-side-fallback-2026-07-01",
-                "fallback-credit-2026-06-01",
-                "fallback-credit-2026-07-01",
-                "agent-memory-2026-07-22",
-                "mid-conversation-tool-changes-2026-07-01",
-                "compact-2026-01-12",
-                "computer-use-2025-11-24",
-                "mcp-tunnels-2026-06-22",
-                "structured-outputs-2025-11-13",
-                "task-budgets-2026-03-13",
-                "thinking-display-updates-2026-08-18",
-                "ce-user-management-2026-07-13",
-                "mid-conversation-output-config-2026-07-01",
-                "thinking-binding-controls-2026-08-01",
-                "mid-conversation-system-clear-at-2026-08-21",
-                "compact-2026-09-04",
-                "inline-tools-2026-09-15",
-                "mcp-client-2026-09-15",
-                "ce-plugins-2026-09-01",
-                "spend-limit-reads-2026-09-26",
-                "telemetry-destinations-2026-08-11"
-              ],
-              "type": "string"
-            }
-          ]
-        },
         "AnthropicModelListParams": {
           "$ref": "#/definitions/ModelListParams"
         },
@@ -6944,13 +7070,6 @@
             },
             "before_id": {
               "type": "string"
-            },
-            "betas": {
-              "deprecated": "Deprecated. This parameter will be removed from this method in a\nfuture release. To use beta features, call the beta models methods\n(`client.beta.models`) instead.",
-              "items": {
-                "$ref": "#/definitions/AnthropicBeta"
-              },
-              "type": "array"
             },
             "lifecycle": {
               "description": "Query param: Filter the list to models in any of the given lifecycle stages (`active`, `deprecated`, or `retired`). Up to 3 values. When omitted, the list contains the `active` and `deprecated` models; `retired` models appear only when `retired` is requested explicitly.",
@@ -6981,82 +7100,12 @@
       "$ref": "#/definitions/AnthropicModelRetrieveParams",
       "$schema": "http://json-schema.org/draft-07/schema#",
       "definitions": {
-        "AnthropicBeta": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "enum": [
-                "message-batches-2024-09-24",
-                "prompt-caching-2024-07-31",
-                "computer-use-2024-10-22",
-                "computer-use-2025-01-24",
-                "pdfs-2024-09-25",
-                "token-counting-2024-11-01",
-                "token-efficient-tools-2025-02-19",
-                "output-128k-2025-02-19",
-                "files-api-2025-04-14",
-                "mcp-client-2025-04-04",
-                "mcp-client-2025-11-20",
-                "dev-full-thinking-2025-05-14",
-                "interleaved-thinking-2025-05-14",
-                "code-execution-2025-05-22",
-                "extended-cache-ttl-2025-04-11",
-                "context-1m-2025-08-07",
-                "context-management-2025-06-27",
-                "model-context-window-exceeded-2025-08-26",
-                "skills-2025-10-02",
-                "fast-mode-2026-02-01",
-                "output-300k-2026-03-24",
-                "user-profiles-2026-03-24",
-                "user-profiles-2026-08-18",
-                "user-profiles-2026-09-04",
-                "advisor-tool-2026-03-01",
-                "managed-agents-2026-04-01",
-                "cache-diagnosis-2026-04-07",
-                "dreaming-2026-04-21",
-                "thinking-token-count-2026-05-13",
-                "server-side-fallback-2026-06-01",
-                "server-side-fallback-2026-07-01",
-                "fallback-credit-2026-06-01",
-                "fallback-credit-2026-07-01",
-                "agent-memory-2026-07-22",
-                "mid-conversation-tool-changes-2026-07-01",
-                "compact-2026-01-12",
-                "computer-use-2025-11-24",
-                "mcp-tunnels-2026-06-22",
-                "structured-outputs-2025-11-13",
-                "task-budgets-2026-03-13",
-                "thinking-display-updates-2026-08-18",
-                "ce-user-management-2026-07-13",
-                "mid-conversation-output-config-2026-07-01",
-                "thinking-binding-controls-2026-08-01",
-                "mid-conversation-system-clear-at-2026-08-21",
-                "compact-2026-09-04",
-                "inline-tools-2026-09-15",
-                "mcp-client-2026-09-15",
-                "ce-plugins-2026-09-01",
-                "spend-limit-reads-2026-09-26",
-                "telemetry-destinations-2026-08-11"
-              ],
-              "type": "string"
-            }
-          ]
-        },
         "AnthropicModelRetrieveParams": {
           "$ref": "#/definitions/ModelRetrieveParams"
         },
         "ModelRetrieveParams": {
           "additionalProperties": false,
           "properties": {
-            "betas": {
-              "deprecated": "Deprecated. This parameter will be removed from this method in a\nfuture release. To use beta features, call the beta models methods\n(`client.beta.models`) instead.",
-              "items": {
-                "$ref": "#/definitions/AnthropicBeta"
-              },
-              "type": "array"
-            },
             "workspace_id": {
               "description": "Optional header to select the Workspace for this request. The value is a Workspace ID (for example, `wrkspc_011CZkZaBF1tNoB5wlCeusgy`).\n\nOnly needed for credentials that can act on more than one Workspace. A credential that belongs to a specific Workspace may omit it; if sent, it must match that Workspace.",
               "type": "string"
