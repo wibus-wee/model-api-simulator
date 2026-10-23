@@ -25,8 +25,8 @@ importers:
         specifier: ^22.20.1
         version: 22.20.5
       anthropic-sdk:
-        specifier: npm:@anthropic-ai/sdk@0.135.0
-        version: '@anthropic-ai/sdk@0.135.0'
+        specifier: npm:@anthropic-ai/sdk@1.1.0
+        version: '@anthropic-ai/sdk@1.1.0'
       esbuild:
         specifier: 0.25.12
         version: 0.25.12
@@ -34,8 +34,8 @@ importers:
         specifier: ^4.9.0
         version: 4.10.2
       openai:
-        specifier: 7.39.0
-        version: 7.39.0
+        specifier: 7.43.0
+        version: 7.43.0
       ts-json-schema-generator:
         specifier: ^2.9.0
         version: 2.9.0
@@ -54,8 +54,8 @@ importers:
 
 packages:
 
-  '@anthropic-ai/sdk@0.135.0':
-    resolution: {integrity: sha512-WWrdL57JhU5KoynpTjt9GXK6k7ud9nPw2uw/Trn+oBXh6s0KpjhAccWZm2Qxw08ARYG1UDQj5iC+JO42j1rt/g==}
+  '@anthropic-ai/sdk@1.1.0':
+    resolution: {integrity: sha512-Op/fKMsfVwFCfObc87leLOFlORE0RjOvLzRzPCWWLI7Ww6bobpKR6YmYC8ZYgulRh+m2a/3/61VUXoWHFtCXIw==}
     hasBin: true
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
@@ -806,13 +806,14 @@ packages:
     resolution: {integrity: sha512-XrsrhT5sybtKI6wakr2SPOlGZWWYbUXZ7a0jT8/QOeAPau+1X/bSegNe5YR75oJmEZQbKningirmGOEJCIk61Q==}
     engines: {node: '>=12.20.0'}
 
-  openai@7.39.0:
-    resolution: {integrity: sha512-iEA9ndbrj32vhYZwJg2v9BQVuztGUOb2SBQU16ZcWNkQHWEBjtarxjqR9c6d5PbWMG0Eyfhk66OZ0iJ8XpFjyw==}
+  openai@7.43.0:
+    resolution: {integrity: sha512-fBjKaDFG8AVfkGYoIo/E+xNRlNk7nx2nQ9GoQtXfePzPjg4QcT6nejkhXayJnEwSpFGfthOrAPI2KXj5yAqg9A==}
     engines: {node: '>=22.0.0'}
     peerDependencies:
       '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
       '@smithy/hash-node': '>=4.3.0 <5'
       '@smithy/signature-v4': '>=5.4.0 <6'
+      google-auth-library: '>=9.15.1 <11'
       undici: '>=5 <9'
       ws: ^8.21.0
       zod: ^3.25 || ^4.0
@@ -822,6 +823,8 @@ packages:
       '@smithy/hash-node':
         optional: true
       '@smithy/signature-v4':
+        optional: true
+      google-auth-library:
         optional: true
       undici:
         optional: true
@@ -1040,7 +1043,7 @@ packages:
 
 snapshots:
 
-  '@anthropic-ai/sdk@0.135.0':
+  '@anthropic-ai/sdk@1.1.0':
     dependencies:
       '@opentelemetry/api': 1.9.1
       json-schema-to-ts: 3.1.1
@@ -1559,7 +1562,7 @@ snapshots:
 
   obug@2.2.1: {}
 
-  openai@7.39.0: {}
+  openai@7.43.0: {}
 
   openapi-types@12.1.3: {}
 
