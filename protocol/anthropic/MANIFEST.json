@@ -3,7 +3,7 @@
   "declarations": [
     {
       "path": "resources/messages/messages.d.ts",
-      "sha256": "8195754b8856aa6f350db2802f308e7d4abf8895366bb1c716e74a573329df5e"
+      "sha256": "86ea5c731d8e32a12b613255b887807aa0554a90287915ad85a320d17aa50c00"
     },
     {
       "path": "resources/models.d.ts",
@@ -15,21 +15,21 @@
     },
     {
       "path": "resources/beta/messages/messages.d.ts",
-      "sha256": "d00a8a62d286c19b56341503cd37b0548d312cefb650640a97c6ea83f72e9bdd"
+      "sha256": "905346158b7d6f662b4ab27d836f2b6580273bdcdaf272e646b59130ceb75f00"
     },
     {
       "path": "resources/beta/models.d.ts",
       "sha256": "53c4bcfd6e471ed4d520a5527b2cbf63c59f2ce0439154656479f5fda7df9b94"
     }
   ],
-  "generatedAt": "2026-10-23T08:50:16.868Z",
+  "generatedAt": "2026-10-26T14:45:34.223Z",
   "grammarSha256": "ebdd034edaee848ac357124935db45a1c87c4473b41de1ab0f223c265c2dfea5",
   "owner": "@cradle/model-api-simulator",
-  "packageIntegrity": "sha512-Op/fKMsfVwFCfObc87leLOFlORE0RjOvLzRzPCWWLI7Ww6bobpKR6YmYC8ZYgulRh+m2a/3/61VUXoWHFtCXIw==",
+  "packageIntegrity": "sha512-k7z9BlLLPxfZH+ov7dS6EnaN/wiZeV8YNT1LZfrpAHIy7oY7pHr4UzirF9f2OlHtFEnRBOX+AZQ91Y5fK+TPTw==",
   "provider": "anthropic",
   "refreshCommand": "pnpm protocol:refresh:anthropic",
-  "schemaSha256": "c704beffcba3c0ad7f897a77ecb2d4d213cf8daafffdd203f953fc0641749522",
-  "sdkVersion": "1.1.0",
+  "schemaSha256": "97efb00170a5d743dd9af3de7767ebfb5adcbd294d4394a59f5a3975dfbc71ac",
+  "sdkVersion": "1.3.0",
   "selectedTypes": [
     "AnthropicMessageCreateParams",
     "AnthropicMessageCountTokensParams",
