@@ -140,8 +140,7 @@ function streamSteps(
 }
 
 function modelsResponse(observed: Omit<ObservedRequest, 'index'>): Response {
-  const { path, query = {}, headers } = observed
-  const beta = query.beta === 'true' || Object.hasOwn(headers, 'anthropic-beta')
+  const { path, query = {} } = observed
   const model = {
     id: FALLBACK_MODEL,
     type: 'model',
@@ -154,7 +153,9 @@ function modelsResponse(observed: Omit<ObservedRequest, 'index'>): Response {
     lifecycle: 'active',
     line: null,
     retires_at: null,
-    ...(beta ? { allowed_fallback_models: null } : {}),
+    // SDK 1.3 no longer marks beta model requests on the wire. Both SDK
+    // namespaces share this endpoint, so emit the complete known model shape.
+    allowed_fallback_models: null,
   }
   if (path === '/v1/models') {
     const lifecycle = query['lifecycle[]']

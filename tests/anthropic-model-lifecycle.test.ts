@@ -2,6 +2,7 @@ import Anthropic from 'anthropic-sdk'
 import { describe, expect, it } from 'vitest'
 
 import type { JsonValue } from '../src/contract'
+import { OperationRegistry } from '../src/core/operation-registry'
 import { JsonSchemaRegistry } from '../src/core/json-schema-registry'
 import { createSimulatorApp, createSimulatorRuntime } from '../src/server'
 
@@ -28,10 +29,12 @@ describe('Anthropic model lifecycle probes', () => {
         expect(page.data).toHaveLength(1)
         const model = page.data[0]!
         expect(model.lifecycle).toBe('active')
-        const schema = `anthropic:draft-07:${beta ? 'AnthropicBeta' : 'Anthropic'}ModelInfo` as const
+        const schema = 'anthropic:draft-07:AnthropicBetaModelInfo' as const
+        expect(model).toHaveProperty('allowed_fallback_models', null)
         expect(() => schemas.validate(schema, model as unknown as JsonValue)).not.toThrow()
         expect(runtime.controller.requests()[0]?.query).toMatchObject({ 'lifecycle[]': ['active', 'deprecated'] })
-        if (beta) { expect(runtime.controller.requests()[0]?.query?.beta).toBe('true') }
+        // SDK 1.3 carries beta as an internal qualifier, not a wire parameter.
+        expect(runtime.controller.requests()[0]?.query?.beta).toBeUndefined()
         const retrieved = await models.retrieve(model.id)
         expect(() => schemas.validate(schema, retrieved as unknown as JsonValue)).not.toThrow()
         expect(retrieved.id).toBe(model.id)
@@ -60,6 +63,48 @@ describe('Anthropic model lifecycle probes', () => {
     expect(model.id).toBe('custom-model')
     expect(model.allowed_fallback_models).toBeNull()
     expect(() => schemas.validate('anthropic:draft-07:AnthropicBetaModelInfo', model)).not.toThrow()
+  })
+
+  it.each(['?beta=true', ''])('serves the complete model shape for legacy and unmarked routes %s', async (query) => {
+    const { app } = setup()
+    for (const path of ['/v1/models', '/v1/models/custom-model']) {
+      const response = await app.handle(new Request(`http://simulator${path}${query}`, { headers }))
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      const model = path === '/v1/models' ? body.data[0] : body
+      expect(model.allowed_fallback_models).toBeNull()
+      expect(() => schemas.validate('anthropic:draft-07:AnthropicBetaModelInfo', model)).not.toThrow()
+    }
+  })
+
+  it.each(['list', 'retrieve'] as const)('validates exact known %s response shapes without guessing SDK namespaces', async (method) => {
+    const { app } = setup()
+    const model = await (await app.handle(new Request('http://simulator/v1/models/custom', { headers }))).json()
+    const { allowed_fallback_models: _fallback, ...base } = model
+    const registry = new OperationRegistry()
+    const path = method === 'list' ? '/v1/models' : '/v1/models/custom'
+    const validate = (value: JsonValue, explicitBeta = false) => {
+      const request = new Request(`http://simulator${path}${explicitBeta ? '?beta=true' : ''}`, { headers })
+      registry.validateResponse(registry.match('anthropic', request), request, 200,
+        method === 'list' ? { data: [value], has_more: false } : value)
+    }
+    expect(() => validate(base)).not.toThrow()
+    expect(() => validate(model)).not.toThrow()
+    expect(() => validate(model, true)).not.toThrow()
+    expect(() => validate(base, true)).toThrow()
+    expect(() => validate({ ...model, allowed_fallback_models: 42 })).toThrow()
+    expect(() => validate({ ...model, lifecycle: 'invented' })).toThrow()
+    expect(() => validate({ ...model, surprise: true })).toThrow()
+    const { lifecycle: _lifecycle, ...missingRequired } = model
+    expect(() => validate(missingRequired)).toThrow()
+  })
+
+  it('keeps newly declared server-held message threads outside the certified core', () => {
+    const request = { model: 'claude-test', max_tokens: 16, messages: [{ role: 'user', content: 'hello' }] }
+    const schema = 'anthropic:draft-07:AnthropicBetaMessageCreateParams'
+    expect(() => schemas.validate(schema, { ...request, thread: null })).not.toThrow()
+    expect(() => schemas.validate(schema, { ...request, thread: { type: 'create' } })).toThrow()
+    expect(() => schemas.validate(schema, { ...request, thread: { type: 'continue', previous_message_id: 'msg_1' } })).toThrow()
   })
 
   it('keeps an unmatched queued conversation intact across probes', async () => {

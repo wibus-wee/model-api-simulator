@@ -127,6 +127,14 @@ export class OperationRegistry {
     }
   }
 
+  // SDK 1.3 base and beta model calls can be identical HTTP requests. Allow
+  // either exact known response shape on an unmarked route, not arbitrary extra
+  // fields. Explicit beta requests still require the beta contract.
+  #validateAnthropicModel(operation: MatchedOperation, model: JsonValue): void {
+    const beta = operation.beta || (isJsonObject(model) && Object.hasOwn(model, 'allowed_fallback_models'))
+    this.#schemas.validate(anthropicVariantSchema('anthropic:draft-07:AnthropicModelInfo', beta), model)
+  }
+
   validateResponse(
     operation: MatchedOperation,
     request: Request,
@@ -143,11 +151,11 @@ export class OperationRegistry {
         if (models === undefined || !isJsonArray(models)) {
           throw new Error('Anthropic model list response requires a data array')
         }
-        const schemaId = anthropicVariantSchema(
-          'anthropic:draft-07:AnthropicModelInfo',
-          operation.beta,
-        )
-        for (const model of models) { this.#schemas.validate(schemaId, model) }
+        for (const model of models) { this.#validateAnthropicModel(operation, model) }
+        return
+      }
+      if (operation.id === 'models.retrieve') {
+        this.#validateAnthropicModel(operation, body)
         return
       }
       if (definition.responseSchema) {
