@@ -368,7 +368,7 @@
           "additionalProperties": false,
           "properties": {
             "thinking_tokens": {
-              "description": "Number of output tokens the model generated as internal reasoning, including the thinking-block delimiter tokens.\n\nReflects the raw reasoning the model produced, not the (possibly shorter) summarized thinking text returned in the response body. Computed by re-tokenizing the raw reasoning text, so it may differ from the model's exact generation count by a small number of tokens. Always ≤ `output_tokens`; `output_tokens - thinking_tokens` approximates the non-reasoning output.",
+              "description": "Number of output tokens the model generated as internal reasoning, including the thinking-block delimiter tokens.\n\nReflects the raw reasoning the model produced, not the (possibly shorter) summarized thinking text returned in the response body. It may differ from the model's exact generation count by a small number of tokens. Always ≤ `output_tokens`; `output_tokens - thinking_tokens` approximates the non-reasoning output.",
               "type": "number"
             }
           },
@@ -746,13 +746,15 @@
                 "spend-limit-reads-2026-09-26",
                 "telemetry-destinations-2026-08-11",
                 "webhooks-2026-10-07",
+                "admin-user-sign-out-2026-10-08",
                 "message-threads-2026-08-12",
                 "analytics-usage-cost-2026-08-24",
                 "experimental-claude-tag-2026-10-21"
               ],
               "type": "string"
             }
-          ]
+          ],
+          "description": "Beta names you can send in the `anthropic-beta` header.\n\nSee [Beta headers](https://platform.claude.com/docs/en/api/beta-headers) for how to send them and where to find the name a feature needs."
         },
         "AnthropicBetaMessageCountTokensParams": {
           "$ref": "#/definitions/MessageCountTokensParams"
@@ -1548,13 +1550,15 @@
                 "spend-limit-reads-2026-09-26",
                 "telemetry-destinations-2026-08-11",
                 "webhooks-2026-10-07",
+                "admin-user-sign-out-2026-10-08",
                 "message-threads-2026-08-12",
                 "analytics-usage-cost-2026-08-24",
                 "experimental-claude-tag-2026-10-21"
               ],
               "type": "string"
             }
-          ]
+          ],
+          "description": "Beta names you can send in the `anthropic-beta` header.\n\nSee [Beta headers](https://platform.claude.com/docs/en/api/beta-headers) for how to send them and where to find the name a feature needs."
         },
         "AnthropicBetaMessageCreateParams": {
           "$ref": "#/definitions/MessageCreateParams"
@@ -3302,13 +3306,15 @@
                 "spend-limit-reads-2026-09-26",
                 "telemetry-destinations-2026-08-11",
                 "webhooks-2026-10-07",
+                "admin-user-sign-out-2026-10-08",
                 "message-threads-2026-08-12",
                 "analytics-usage-cost-2026-08-24",
                 "experimental-claude-tag-2026-10-21"
               ],
               "type": "string"
             }
-          ]
+          ],
+          "description": "Beta names you can send in the `anthropic-beta` header.\n\nSee [Beta headers](https://platform.claude.com/docs/en/api/beta-headers) for how to send them and where to find the name a feature needs."
         },
         "AnthropicBetaModelListParams": {
           "$ref": "#/definitions/ModelListParams"
@@ -3417,13 +3423,15 @@
                 "spend-limit-reads-2026-09-26",
                 "telemetry-destinations-2026-08-11",
                 "webhooks-2026-10-07",
+                "admin-user-sign-out-2026-10-08",
                 "message-threads-2026-08-12",
                 "analytics-usage-cost-2026-08-24",
                 "experimental-claude-tag-2026-10-21"
               ],
               "type": "string"
             }
-          ]
+          ],
+          "description": "Beta names you can send in the `anthropic-beta` header.\n\nSee [Beta headers](https://platform.claude.com/docs/en/api/beta-headers) for how to send them and where to find the name a feature needs."
         },
         "AnthropicBetaModelRetrieveParams": {
           "$ref": "#/definitions/ModelRetrieveParams"
@@ -3916,7 +3924,7 @@
           "additionalProperties": false,
           "properties": {
             "thinking_tokens": {
-              "description": "Number of output tokens the model generated as internal reasoning, including the thinking-block delimiter tokens.\n\nReflects the raw reasoning the model produced, not the (possibly shorter) summarized thinking text returned in the response body. Computed by re-tokenizing the raw reasoning text, so it may differ from the model's exact generation count by a small number of tokens. Always ≤ `output_tokens`; `output_tokens - thinking_tokens` approximates the non-reasoning output.",
+              "description": "Number of output tokens the model generated as internal reasoning, including the thinking-block delimiter tokens.\n\nReflects the raw reasoning the model produced, not the (possibly shorter) summarized thinking text returned in the response body. It may differ from the model's exact generation count by a small number of tokens. Always ≤ `output_tokens`; `output_tokens - thinking_tokens` approximates the non-reasoning output.",
               "type": "number"
             }
           },
@@ -4538,10 +4546,12 @@
           "additionalProperties": false,
           "properties": {
             "message": {
+              "description": "A human-readable explanation of the error. Its wording can change, so don't match on it.",
               "type": "string"
             },
             "type": {
               "const": "api_error",
+              "description": "The broad category of the error.",
               "type": "string"
             }
           },
@@ -4555,10 +4565,12 @@
           "additionalProperties": false,
           "properties": {
             "message": {
+              "description": "A human-readable explanation of the error. Its wording can change, so don't match on it.",
               "type": "string"
             },
             "type": {
               "const": "authentication_error",
+              "description": "The broad category of the error.",
               "type": "string"
             }
           },
@@ -4572,10 +4584,12 @@
           "additionalProperties": false,
           "properties": {
             "message": {
+              "description": "A human-readable explanation of the error. Its wording can change, so don't match on it.",
               "type": "string"
             },
             "type": {
               "const": "billing_error",
+              "description": "The broad category of the error.",
               "type": "string"
             }
           },
@@ -4644,10 +4658,12 @@
           "additionalProperties": false,
           "properties": {
             "message": {
+              "description": "A human-readable explanation of the error. Its wording can change, so don't match on it.",
               "type": "string"
             },
             "type": {
               "const": "timeout_error",
+              "description": "The broad category of the error.",
               "type": "string"
             }
           },
@@ -4661,10 +4677,12 @@
           "additionalProperties": false,
           "properties": {
             "message": {
+              "description": "A human-readable explanation of the error. Its wording can change, so don't match on it.",
               "type": "string"
             },
             "type": {
               "const": "invalid_request_error",
+              "description": "The broad category of the error.",
               "type": "string"
             }
           },
@@ -4678,10 +4696,12 @@
           "additionalProperties": false,
           "properties": {
             "message": {
+              "description": "A human-readable explanation of the error. Its wording can change, so don't match on it.",
               "type": "string"
             },
             "type": {
               "const": "not_found_error",
+              "description": "The broad category of the error.",
               "type": "string"
             }
           },
@@ -4695,10 +4715,12 @@
           "additionalProperties": false,
           "properties": {
             "message": {
+              "description": "A human-readable explanation of the error. Its wording can change, so don't match on it.",
               "type": "string"
             },
             "type": {
               "const": "overloaded_error",
+              "description": "The broad category of the error.",
               "type": "string"
             }
           },
@@ -4712,10 +4734,12 @@
           "additionalProperties": false,
           "properties": {
             "message": {
+              "description": "A human-readable explanation of the error. Its wording can change, so don't match on it.",
               "type": "string"
             },
             "type": {
               "const": "permission_error",
+              "description": "The broad category of the error.",
               "type": "string"
             }
           },
@@ -4729,10 +4753,12 @@
           "additionalProperties": false,
           "properties": {
             "message": {
+              "description": "A human-readable explanation of the error. Its wording can change, so don't match on it.",
               "type": "string"
             },
             "type": {
               "const": "rate_limit_error",
+              "description": "The broad category of the error.",
               "type": "string"
             }
           },
@@ -5016,7 +5042,7 @@
           "additionalProperties": false,
           "properties": {
             "thinking_tokens": {
-              "description": "Number of output tokens the model generated as internal reasoning, including the thinking-block delimiter tokens.\n\nReflects the raw reasoning the model produced, not the (possibly shorter) summarized thinking text returned in the response body. Computed by re-tokenizing the raw reasoning text, so it may differ from the model's exact generation count by a small number of tokens. Always ≤ `output_tokens`; `output_tokens - thinking_tokens` approximates the non-reasoning output.",
+              "description": "Number of output tokens the model generated as internal reasoning, including the thinking-block delimiter tokens.\n\nReflects the raw reasoning the model produced, not the (possibly shorter) summarized thinking text returned in the response body. It may differ from the model's exact generation count by a small number of tokens. Always ≤ `output_tokens`; `output_tokens - thinking_tokens` approximates the non-reasoning output.",
               "type": "number"
             }
           },
@@ -7500,7 +7526,7 @@
           "additionalProperties": false,
           "properties": {
             "thinking_tokens": {
-              "description": "Number of output tokens the model generated as internal reasoning, including the thinking-block delimiter tokens.\n\nReflects the raw reasoning the model produced, not the (possibly shorter) summarized thinking text returned in the response body. Computed by re-tokenizing the raw reasoning text, so it may differ from the model's exact generation count by a small number of tokens. Always ≤ `output_tokens`; `output_tokens - thinking_tokens` approximates the non-reasoning output.",
+              "description": "Number of output tokens the model generated as internal reasoning, including the thinking-block delimiter tokens.\n\nReflects the raw reasoning the model produced, not the (possibly shorter) summarized thinking text returned in the response body. It may differ from the model's exact generation count by a small number of tokens. Always ≤ `output_tokens`; `output_tokens - thinking_tokens` approximates the non-reasoning output.",
               "type": "number"
             }
           },
