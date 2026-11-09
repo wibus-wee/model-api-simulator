@@ -838,7 +838,7 @@
             "anyOf": [
               {
                 "description": "The namespace of the tool that produced the output.",
-                "maxLength": 64,
+                "maxLength": 128,
                 "minLength": 1,
                 "pattern": "^[a-zA-Z0-9_-]+$",
                 "type": "string"
@@ -7570,7 +7570,7 @@
             "anyOf": [
               {
                 "description": "The namespace of the tool that produced the output.",
-                "maxLength": 64,
+                "maxLength": 128,
                 "minLength": 1,
                 "pattern": "^[a-zA-Z0-9_-]+$",
                 "type": "string"
