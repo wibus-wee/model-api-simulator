@@ -1,9 +1,9 @@
 {
   "files": {
     "anthropic-schemas.ts": "a33e3e4190c4c712f5cb45de1101a29a618e8ba70ac46166bf2bcd81c496b091",
-    "corpus-manifest.json": "847314619b420bad98db7a0351190055346d856787d641a9770e8a2c8421eae1",
+    "corpus-manifest.json": "bc17dde7eb76e55f96cdef3f7d4dc1584faf7bed1d75a0965e9b42395c06fd47",
     "openai-schemas.ts": "44f9398e91c7fd40c897e10e34d538df82a7c4c38c0987645c7b7c9a3081eb58",
-    "protocol-coverage.json": "dc00eb6bc86068934def7f916a18735ee3173fc953e324be60c2d685b2c42bb0"
+    "protocol-coverage.json": "b18016c0d97299fcaff0a92ce39a7b3dfb4438a794c9c15a6f7f6694145ae8ed"
   },
-  "inputFingerprint": "7715ca64739138268ce989fbc72da4eb2da501b93026527d3075ccf3bc2b4ab6"
+  "inputFingerprint": "c6d4964715bb607cd3d33df9427f4ac3e8462e15e0c93e2a1849ed2afdbd7705"
 }

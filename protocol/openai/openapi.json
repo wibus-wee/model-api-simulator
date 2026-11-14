@@ -624,7 +624,7 @@
                 "anyOf": [
                   {
                     "default": "disabled",
-                    "description": "The truncation strategy to use for the model response.\n- `auto`: If the input to this Response exceeds\n  the model's context window size, the model will truncate the\n  response to fit the context window by dropping items from the beginning of the conversation.\n- `disabled` (default): If the input size will exceed the context window\n  size for a model, the request will fail with a 400 error.\n",
+                    "description": "The truncation strategy to use for the model response.\n- `auto`: If the input to this Response exceeds\n  the model's context window size, the model will truncate the\n  response to fit the context window by dropping items from the beginning of the conversation.\n  On some models, trimming can begin earlier because the API subtracts the model's\n  maximum output allowance from its input limit, even if you set a lower `max_output_tokens`.\n- `disabled` (default): If the input size will exceed the context window\n  size for a model, the request will fail with a 400 error.\n",
                     "enum": [
                       "auto",
                       "disabled"
@@ -1066,12 +1066,9 @@
             "type": "string"
           },
           "type": {
+            "const": "function_call",
             "description": "The type of the function tool call. Always `function_call`.\n",
-            "enum": [
-              "function_call"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -1151,12 +1148,9 @@
             "type": "string"
           },
           "type": {
+            "const": "function_call_output",
             "description": "The type of the function tool call output. Always `function_call_output`.\n",
-            "enum": [
-              "function_call_output"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -1492,12 +1486,9 @@
             "type": "string"
           },
           "type": {
+            "const": "message",
             "description": "The type of the message input. Always set to `message`.\n",
-            "enum": [
-              "message"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -1532,6 +1523,16 @@
             "type": "array"
           }
         ]
+      },
+      "BetaInputRemovalReason": {
+        "enum": [
+          "organization_mismatch",
+          "end_user_mismatch",
+          "model_mismatch",
+          "prefix_mismatch",
+          "turn_boundary"
+        ],
+        "type": "string"
       },
       "BetaInputTextContent": {
         "description": "A text input to the model.",
@@ -2443,12 +2444,9 @@
             ]
           },
           "role": {
+            "const": "assistant",
             "description": "The role of the output message. Always `assistant`.\n",
-            "enum": [
-              "assistant"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           },
           "status": {
             "description": "The status of the message input. One of `in_progress`, `completed`, or\n`incomplete`. Populated when input items are returned via API.\n",
@@ -2460,12 +2458,9 @@
             "type": "string"
           },
           "type": {
+            "const": "message",
             "description": "The type of the output message. Always `message`.\n",
-            "enum": [
-              "message"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -2744,6 +2739,40 @@
           }
         ]
       },
+      "BetaReasoningInputTransformation": {
+        "properties": {
+          "action": {
+            "default": "removed",
+            "enum": [
+              "removed"
+            ],
+            "type": "string",
+            "x-stainless-const": true
+          },
+          "id": {
+            "description": "The original reasoning item ID.",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/BetaInputRemovalReason"
+          },
+          "type": {
+            "default": "reasoning",
+            "enum": [
+              "reasoning"
+            ],
+            "type": "string",
+            "x-stainless-const": true
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "action",
+          "reason"
+        ],
+        "type": "object"
+      },
       "BetaReasoningItem": {
         "description": "A description of the chain of thought used by a reasoning model while generating\na response. Be sure to include these items in your `input` to the Responses API\nfor subsequent turns of a conversation if you are manually\n[managing context](https://developers.openai.com/api/docs/guides/conversation-state).\n",
         "properties": {
@@ -2975,6 +3004,13 @@
                   }
                 ]
               },
+              "input_transformations": {
+                "description": "Reasoning inputs withheld from the model, in input order.",
+                "items": {
+                  "$ref": "#/components/schemas/BetaReasoningInputTransformation"
+                },
+                "type": "array"
+              },
               "instructions": {
                 "anyOf": [
                   {
@@ -3022,12 +3058,9 @@
                 ]
               },
               "object": {
+                "const": "response",
                 "description": "The object type of this resource - always set to `response`.\n",
-                "enum": [
-                  "response"
-                ],
-                "type": "string",
-                "x-stainless-const": true
+                "type": "string"
               },
               "output": {
                 "description": "An array of content items generated by the model.\n\n- The length and order of items in the `output` array is dependent\n  on the model's response.\n- Rather than accessing the first item in the `output` array and\n  assuming it's an `assistant` message with the content generated by\n  the model, you might consider using the `output_text` property where\n  supported in SDKs.\n",
@@ -3095,7 +3128,7 @@
                 "anyOf": [
                   {
                     "default": "disabled",
-                    "description": "The truncation strategy to use for the model response.\n- `auto`: If the input to this Response exceeds\n  the model's context window size, the model will truncate the\n  response to fit the context window by dropping items from the beginning of the conversation.\n- `disabled` (default): If the input size will exceed the context window\n  size for a model, the request will fail with a 400 error.\n",
+                    "description": "The truncation strategy to use for the model response.\n- `auto`: If the input to this Response exceeds\n  the model's context window size, the model will truncate the\n  response to fit the context window by dropping items from the beginning of the conversation.\n  On some models, trimming can begin earlier because the API subtracts the model's\n  maximum output allowance from its input limit, even if you set a lower `max_output_tokens`.\n- `disabled` (default): If the input size will exceed the context window\n  size for a model, the request will fail with a 400 error.\n",
                     "enum": [
                       "auto",
                       "disabled"
@@ -3242,12 +3275,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.completed",
             "description": "The type of the event. Always `response.completed`.\n",
-            "enum": [
-              "response.completed"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -3292,12 +3322,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.content_part.added",
             "description": "The type of the event. Always `response.content_part.added`.\n",
-            "enum": [
-              "response.content_part.added"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -3345,12 +3372,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.content_part.done",
             "description": "The type of the event. Always `response.content_part.done`.\n",
-            "enum": [
-              "response.content_part.done"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -3400,12 +3424,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.created",
             "description": "The type of the event. Always `response.created`.\n",
-            "enum": [
-              "response.created"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -3536,12 +3557,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "error",
             "description": "The type of the event. Always `error`.\n",
-            "enum": [
-              "error"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -3576,12 +3594,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.failed",
             "description": "The type of the event. Always `response.failed`.\n",
-            "enum": [
-              "response.failed"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -3595,12 +3610,9 @@
         "description": "JSON object response format. An older method of generating JSON responses.\nUsing `json_schema` is recommended for models that support it. Note that the\nmodel will not generate JSON without a system or user message instructing it\nto do so.\n",
         "properties": {
           "type": {
+            "const": "json_object",
             "description": "The type of response format being defined. Always `json_object`.",
-            "enum": [
-              "json_object"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -3619,12 +3631,9 @@
         "description": "Default response format. Used to generate text responses.\n",
         "properties": {
           "type": {
+            "const": "text",
             "description": "The type of response format being defined. Always `text`.",
-            "enum": [
-              "text"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -3664,12 +3673,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.function_call_arguments.delta",
             "description": "The type of the event. Always `response.function_call_arguments.delta`.\n",
-            "enum": [
-              "response.function_call_arguments.delta"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -3712,11 +3718,8 @@
             "type": "integer"
           },
           "type": {
-            "enum": [
-              "response.function_call_arguments.done"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "const": "response.function_call_arguments.done",
+            "type": "string"
           }
         },
         "required": [
@@ -3751,12 +3754,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.incomplete",
             "description": "The type of the event. Always `response.incomplete`.\n",
-            "enum": [
-              "response.incomplete"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -3789,12 +3789,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.in_progress",
             "description": "The type of the event. Always `response.in_progress`.\n",
-            "enum": [
-              "response.in_progress"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -3866,12 +3863,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.output_item.added",
             "description": "The type of the event. Always `response.output_item.added`.\n",
-            "enum": [
-              "response.output_item.added"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -3909,12 +3903,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.output_item.done",
             "description": "The type of the event. Always `response.output_item.done`.\n",
-            "enum": [
-              "response.output_item.done"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -4068,12 +4059,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.queued",
             "description": "The type of the event. Always 'response.queued'.",
-            "enum": [
-              "response.queued"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -4114,12 +4102,9 @@
                 "type": "string"
               },
               "type": {
+                "const": "summary_text",
                 "description": "The type of the summary part. Always `summary_text`.",
-                "enum": [
-                  "summary_text"
-                ],
-                "type": "string",
-                "x-stainless-const": true
+                "type": "string"
               }
             },
             "required": [
@@ -4137,12 +4122,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.reasoning_summary_part.added",
             "description": "The type of the event. Always `response.reasoning_summary_part.added`.\n",
-            "enum": [
-              "response.reasoning_summary_part.added"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -4185,12 +4167,9 @@
                 "type": "string"
               },
               "type": {
+                "const": "summary_text",
                 "description": "The type of the summary part. Always `summary_text`.",
-                "enum": [
-                  "summary_text"
-                ],
-                "type": "string",
-                "x-stainless-const": true
+                "type": "string"
               }
             },
             "required": [
@@ -4215,12 +4194,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.reasoning_summary_part.done",
             "description": "The type of the event. Always `response.reasoning_summary_part.done`.\n",
-            "enum": [
-              "response.reasoning_summary_part.done"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -4268,12 +4244,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.reasoning_summary_text.delta",
             "description": "The type of the event. Always `response.reasoning_summary_text.delta`.\n",
-            "enum": [
-              "response.reasoning_summary_text.delta"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -4321,12 +4294,9 @@
             "type": "string"
           },
           "type": {
+            "const": "response.reasoning_summary_text.done",
             "description": "The type of the event. Always `response.reasoning_summary_text.done`.\n",
-            "enum": [
-              "response.reasoning_summary_text.done"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -4374,12 +4344,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.reasoning_text.delta",
             "description": "The type of the event. Always `response.reasoning_text.delta`.\n",
-            "enum": [
-              "response.reasoning_text.delta"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -4427,12 +4394,9 @@
             "type": "string"
           },
           "type": {
+            "const": "response.reasoning_text.done",
             "description": "The type of the event. Always `response.reasoning_text.done`.\n",
-            "enum": [
-              "response.reasoning_text.done"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -4480,12 +4444,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.refusal.delta",
             "description": "The type of the event. Always `response.refusal.delta`.\n",
-            "enum": [
-              "response.refusal.delta"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -4533,12 +4494,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.refusal.done",
             "description": "The type of the event. Always `response.refusal.done`.\n",
-            "enum": [
-              "response.refusal.done"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -4687,12 +4645,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.output_text.delta",
             "description": "The type of the event. Always `response.output_text.delta`.\n",
-            "enum": [
-              "response.output_text.delta"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -4748,12 +4703,9 @@
             "type": "string"
           },
           "type": {
+            "const": "response.output_text.done",
             "description": "The type of the event. Always `response.output_text.done`.\n",
-            "enum": [
-              "response.output_text.done"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -5200,12 +5152,9 @@
             "type": "string"
           },
           "type": {
+            "const": "function",
             "description": "The type of the tool. Currently, only `function` is supported.",
-            "enum": [
-              "function"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -5239,12 +5188,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "function",
             "description": "The type of the tool. Currently, only `function` is supported.",
-            "enum": [
-              "function"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -5310,12 +5256,9 @@
             "type": "string"
           },
           "type": {
+            "const": "error",
             "description": "The object type, which is always `error`.",
-            "enum": [
-              "error"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -5341,12 +5284,9 @@
             "type": "object"
           },
           "type": {
+            "const": "function",
             "description": "For function calling, the type is always `function`.",
-            "enum": [
-              "function"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -5447,12 +5387,9 @@
             ]
           },
           "role": {
+            "const": "assistant",
             "description": "The role of the messages author, in this case `assistant`.",
-            "enum": [
-              "assistant"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           },
           "tool_calls": {
             "$ref": "#/components/schemas/ChatCompletionMessageToolCalls"
@@ -5504,12 +5441,9 @@
             "type": "string"
           },
           "role": {
+            "const": "developer",
             "description": "The role of the messages author, in this case `developer`.",
-            "enum": [
-              "developer"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -5538,12 +5472,9 @@
             "type": "string"
           },
           "role": {
+            "const": "function",
             "description": "The role of the messages author, in this case `function`.",
-            "enum": [
-              "function"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -5586,12 +5517,9 @@
             "type": "string"
           },
           "type": {
+            "const": "refusal",
             "description": "The type of the content part.",
-            "enum": [
-              "refusal"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -5612,12 +5540,9 @@
             "type": "string"
           },
           "type": {
+            "const": "text",
             "description": "The type of the content part.",
-            "enum": [
-              "text"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -5654,12 +5579,9 @@
             "type": "string"
           },
           "role": {
+            "const": "system",
             "description": "The role of the messages author, in this case `system`.",
-            "enum": [
-              "system"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -5698,12 +5620,9 @@
             ]
           },
           "role": {
+            "const": "tool",
             "description": "The role of the messages author, in this case `tool`.",
-            "enum": [
-              "tool"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           },
           "tool_call_id": {
             "description": "Tool call that this message is responding to.",
@@ -5752,12 +5671,9 @@
             "type": "string"
           },
           "role": {
+            "const": "user",
             "description": "The role of the messages author, in this case `user`.",
-            "enum": [
-              "user"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -5783,12 +5699,9 @@
               "description": "A URL citation when using web search.\n",
               "properties": {
                 "type": {
+                  "const": "url_citation",
                   "description": "The type of the URL citation. Always `url_citation`.",
-                  "enum": [
-                    "url_citation"
-                  ],
-                  "type": "string",
-                  "x-stainless-const": true
+                  "type": "string"
                 },
                 "url_citation": {
                   "description": "A URL citation when using web search.",
@@ -5909,12 +5822,9 @@
             ]
           },
           "role": {
+            "const": "assistant",
             "description": "The role of the author of this message.",
-            "enum": [
-              "assistant"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           },
           "tool_calls": {
             "anyOf": [
@@ -6113,12 +6023,9 @@
             "$ref": "#/components/schemas/FunctionObject"
           },
           "type": {
+            "const": "function",
             "description": "The type of the tool. Currently, only `function` is supported.",
-            "enum": [
-              "function"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -6377,6 +6284,7 @@
           "instructions": {
             "anyOf": [
               {
+                "deprecated": true,
                 "description": "A system (or developer) message inserted into the model's context.\nWhen used along with `previous_response_id`, the instructions from a previous response will not be carried over to the next response. This makes it simple to swap out system (or developer) messages in new responses.",
                 "type": "string"
               },
@@ -6853,12 +6761,9 @@
                         "$ref": "#/components/schemas/WebSearchLocation"
                       },
                       "type": {
+                        "const": "approximate",
                         "description": "The type of location approximation. Always `approximate`.\n",
-                        "enum": [
-                          "approximate"
-                        ],
-                        "type": "string",
-                        "x-stainless-const": true
+                        "type": "string"
                       }
                     },
                     "required": [
@@ -6992,12 +6897,9 @@
             ]
           },
           "object": {
+            "const": "chat.completion",
             "description": "The object type, which is always `chat.completion`.",
-            "enum": [
-              "chat.completion"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           },
           "service_tier": {
             "$ref": "#/components/schemas/ServiceTier"
@@ -7156,12 +7058,9 @@
             "type": "string"
           },
           "object": {
+            "const": "chat.completion.chunk",
             "description": "The object type, which is always `chat.completion.chunk`.",
-            "enum": [
-              "chat.completion.chunk"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           },
           "service_tier": {
             "$ref": "#/components/schemas/ServiceTier"
@@ -7367,7 +7266,7 @@
                 "anyOf": [
                   {
                     "default": "disabled",
-                    "description": "The truncation strategy to use for the model response.\n- `auto`: If the input to this Response exceeds\n  the model's context window size, the model will truncate the\n  response to fit the context window by dropping items from the beginning of the conversation.\n- `disabled` (default): If the input size will exceed the context window\n  size for a model, the request will fail with a 400 error.\n",
+                    "description": "The truncation strategy to use for the model response.\n- `auto`: If the input to this Response exceeds\n  the model's context window size, the model will truncate the\n  response to fit the context window by dropping items from the beginning of the conversation.\n  On some models, trimming can begin earlier because the API subtracts the model's\n  maximum output allowance from its input limit, even if you set a lower `max_output_tokens`.\n- `disabled` (default): If the input size will exceed the context window\n  size for a model, the request will fail with a 400 error.\n",
                     "enum": [
                       "auto",
                       "disabled"
@@ -7832,12 +7731,9 @@
             "type": "string"
           },
           "type": {
+            "const": "function_call",
             "description": "The type of the function tool call. Always `function_call`.\n",
-            "enum": [
-              "function_call"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -7906,12 +7802,9 @@
             "type": "string"
           },
           "type": {
+            "const": "function_call_output",
             "description": "The type of the function tool call output. Always `function_call_output`.\n",
-            "enum": [
-              "function_call_output"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -8264,12 +8157,9 @@
             "type": "string"
           },
           "type": {
+            "const": "message",
             "description": "The type of the message input. Always set to `message`.\n",
-            "enum": [
-              "message"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -8324,6 +8214,16 @@
             "type": "array"
           }
         ]
+      },
+      "InputRemovalReason": {
+        "enum": [
+          "organization_mismatch",
+          "end_user_mismatch",
+          "model_mismatch",
+          "prefix_mismatch",
+          "turn_boundary"
+        ],
+        "type": "string"
       },
       "InputTextContent": {
         "description": "A text input to the model.",
@@ -8472,11 +8372,8 @@
             "type": "array"
           },
           "object": {
-            "enum": [
-              "list"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "const": "list",
+            "type": "string"
           }
         },
         "required": [
@@ -8694,12 +8591,9 @@
             "type": "string"
           },
           "object": {
+            "const": "model",
             "description": "The object type, which is always \"model\".",
-            "enum": [
-              "model"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           },
           "owned_by": {
             "description": "The organization that owns the model.",
@@ -9442,12 +9336,9 @@
             ]
           },
           "role": {
+            "const": "assistant",
             "description": "The role of the output message. Always `assistant`.\n",
-            "enum": [
-              "assistant"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           },
           "status": {
             "description": "The status of the message input. One of `in_progress`, `completed`, or\n`incomplete`. Populated when input items are returned via API.\n",
@@ -9459,12 +9350,9 @@
             "type": "string"
           },
           "type": {
+            "const": "message",
             "description": "The type of the output message. Always `message`.\n",
-            "enum": [
-              "message"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -9811,6 +9699,40 @@
           }
         ]
       },
+      "ReasoningInputTransformation": {
+        "properties": {
+          "action": {
+            "default": "removed",
+            "enum": [
+              "removed"
+            ],
+            "type": "string",
+            "x-stainless-const": true
+          },
+          "id": {
+            "description": "The original reasoning item ID.",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/InputRemovalReason"
+          },
+          "type": {
+            "default": "reasoning",
+            "enum": [
+              "reasoning"
+            ],
+            "type": "string",
+            "x-stainless-const": true
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "action",
+          "reason"
+        ],
+        "type": "object"
+      },
       "ReasoningItem": {
         "description": "A description of the chain of thought used by a reasoning model while generating\na response. Be sure to include these items in your `input` to the Responses API\nfor subsequent turns of a conversation if you are manually\n[managing context](https://developers.openai.com/api/docs/guides/conversation-state).\n",
         "properties": {
@@ -10031,6 +9953,13 @@
                   }
                 ]
               },
+              "input_transformations": {
+                "description": "Reasoning inputs withheld from the model, in input order.",
+                "items": {
+                  "$ref": "#/components/schemas/ReasoningInputTransformation"
+                },
+                "type": "array"
+              },
               "instructions": {
                 "anyOf": [
                   {
@@ -10078,12 +10007,9 @@
                 ]
               },
               "object": {
+                "const": "response",
                 "description": "The object type of this resource - always set to `response`.\n",
-                "enum": [
-                  "response"
-                ],
-                "type": "string",
-                "x-stainless-const": true
+                "type": "string"
               },
               "output": {
                 "description": "An array of content items generated by the model.\n\n- The length and order of items in the `output` array is dependent\n  on the model's response.\n- Rather than accessing the first item in the `output` array and\n  assuming it's an `assistant` message with the content generated by\n  the model, you might consider using the `output_text` property where\n  supported in SDKs.\n",
@@ -10151,7 +10077,7 @@
                 "anyOf": [
                   {
                     "default": "disabled",
-                    "description": "The truncation strategy to use for the model response.\n- `auto`: If the input to this Response exceeds\n  the model's context window size, the model will truncate the\n  response to fit the context window by dropping items from the beginning of the conversation.\n- `disabled` (default): If the input size will exceed the context window\n  size for a model, the request will fail with a 400 error.\n",
+                    "description": "The truncation strategy to use for the model response.\n- `auto`: If the input to this Response exceeds\n  the model's context window size, the model will truncate the\n  response to fit the context window by dropping items from the beginning of the conversation.\n  On some models, trimming can begin earlier because the API subtracts the model's\n  maximum output allowance from its input limit, even if you set a lower `max_output_tokens`.\n- `disabled` (default): If the input size will exceed the context window\n  size for a model, the request will fail with a 400 error.\n",
                     "enum": [
                       "auto",
                       "disabled"
@@ -10287,12 +10213,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.completed",
             "description": "The type of the event. Always `response.completed`.\n",
-            "enum": [
-              "response.completed"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -10326,12 +10249,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.content_part.added",
             "description": "The type of the event. Always `response.content_part.added`.\n",
-            "enum": [
-              "response.content_part.added"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -10368,12 +10288,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.content_part.done",
             "description": "The type of the event. Always `response.content_part.done`.\n",
-            "enum": [
-              "response.content_part.done"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -10412,12 +10329,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.created",
             "description": "The type of the event. Always `response.created`.\n",
-            "enum": [
-              "response.created"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -10537,12 +10451,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "error",
             "description": "The type of the event. Always `error`.\n",
-            "enum": [
-              "error"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -10566,12 +10477,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.failed",
             "description": "The type of the event. Always `response.failed`.\n",
-            "enum": [
-              "response.failed"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -10585,12 +10493,9 @@
         "description": "JSON object response format. An older method of generating JSON responses.\nUsing `json_schema` is recommended for models that support it. Note that the\nmodel will not generate JSON without a system or user message instructing it\nto do so.\n",
         "properties": {
           "type": {
+            "const": "json_object",
             "description": "The type of response format being defined. Always `json_object`.",
-            "enum": [
-              "json_object"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -10637,12 +10542,9 @@
             "x-openai-structured-output": "json_schema"
           },
           "type": {
+            "const": "json_schema",
             "description": "The type of response format being defined. Always `json_schema`.",
-            "enum": [
-              "json_schema"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -10662,12 +10564,9 @@
         "description": "Default response format. Used to generate text responses.\n",
         "properties": {
           "type": {
+            "const": "text",
             "description": "The type of response format being defined. Always `text`.",
-            "enum": [
-              "text"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -10696,12 +10595,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.function_call_arguments.delta",
             "description": "The type of the event. Always `response.function_call_arguments.delta`.\n",
-            "enum": [
-              "response.function_call_arguments.delta"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -10733,11 +10629,8 @@
             "type": "integer"
           },
           "type": {
-            "enum": [
-              "response.function_call_arguments.done"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "const": "response.function_call_arguments.done",
+            "type": "string"
           }
         },
         "required": [
@@ -10761,12 +10654,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.incomplete",
             "description": "The type of the event. Always `response.incomplete`.\n",
-            "enum": [
-              "response.incomplete"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -10788,12 +10678,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.in_progress",
             "description": "The type of the event. Always `response.in_progress`.\n",
-            "enum": [
-              "response.in_progress"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -10826,12 +10713,9 @@
             "type": "string"
           },
           "object": {
+            "const": "list",
             "description": "The type of object returned, must be `list`.",
-            "enum": [
-              "list"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -10912,12 +10796,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.output_item.added",
             "description": "The type of the event. Always `response.output_item.added`.\n",
-            "enum": [
-              "response.output_item.added"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -10944,12 +10825,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.output_item.done",
             "description": "The type of the event. Always `response.output_item.done`.\n",
-            "enum": [
-              "response.output_item.done"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -11092,12 +10970,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.queued",
             "description": "The type of the event. Always 'response.queued'.",
-            "enum": [
-              "response.queued"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -11127,12 +11002,9 @@
                 "type": "string"
               },
               "type": {
+                "const": "summary_text",
                 "description": "The type of the summary part. Always `summary_text`.",
-                "enum": [
-                  "summary_text"
-                ],
-                "type": "string",
-                "x-stainless-const": true
+                "type": "string"
               }
             },
             "required": [
@@ -11150,12 +11022,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.reasoning_summary_part.added",
             "description": "The type of the event. Always `response.reasoning_summary_part.added`.\n",
-            "enum": [
-              "response.reasoning_summary_part.added"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -11187,12 +11056,9 @@
                 "type": "string"
               },
               "type": {
+                "const": "summary_text",
                 "description": "The type of the summary part. Always `summary_text`.",
-                "enum": [
-                  "summary_text"
-                ],
-                "type": "string",
-                "x-stainless-const": true
+                "type": "string"
               }
             },
             "required": [
@@ -11217,12 +11083,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.reasoning_summary_part.done",
             "description": "The type of the event. Always `response.reasoning_summary_part.done`.\n",
-            "enum": [
-              "response.reasoning_summary_part.done"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -11259,12 +11122,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.reasoning_summary_text.delta",
             "description": "The type of the event. Always `response.reasoning_summary_text.delta`.\n",
-            "enum": [
-              "response.reasoning_summary_text.delta"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -11301,12 +11161,9 @@
             "type": "string"
           },
           "type": {
+            "const": "response.reasoning_summary_text.done",
             "description": "The type of the event. Always `response.reasoning_summary_text.done`.\n",
-            "enum": [
-              "response.reasoning_summary_text.done"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -11343,12 +11200,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.reasoning_text.delta",
             "description": "The type of the event. Always `response.reasoning_text.delta`.\n",
-            "enum": [
-              "response.reasoning_text.delta"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -11385,12 +11239,9 @@
             "type": "string"
           },
           "type": {
+            "const": "response.reasoning_text.done",
             "description": "The type of the event. Always `response.reasoning_text.done`.\n",
-            "enum": [
-              "response.reasoning_text.done"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -11427,12 +11278,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.refusal.delta",
             "description": "The type of the event. Always `response.refusal.delta`.\n",
-            "enum": [
-              "response.refusal.delta"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -11469,12 +11317,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.refusal.done",
             "description": "The type of the event. Always `response.refusal.done`.\n",
-            "enum": [
-              "response.refusal.done"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -11612,12 +11457,9 @@
             "type": "integer"
           },
           "type": {
+            "const": "response.output_text.delta",
             "description": "The type of the event. Always `response.output_text.delta`.\n",
-            "enum": [
-              "response.output_text.delta"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -11662,12 +11504,9 @@
             "type": "string"
           },
           "type": {
+            "const": "response.output_text.done",
             "description": "The type of the event. Always `response.output_text.done`.\n",
-            "enum": [
-              "response.output_text.done"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -12087,7 +11926,7 @@
           "truncation": {
             "$ref": "#/components/schemas/TruncationEnum",
             "deprecated": true,
-            "description": "The truncation strategy to use for the model response. - `auto`: If the input to this Response exceeds the model's context window size, the model will truncate the response to fit the context window by dropping items from the beginning of the conversation. - `disabled` (default): If the input size will exceed the context window size for a model, the request will fail with a 400 error."
+            "description": "The truncation strategy to use for the model response.\n- `auto`: If the input to this Response exceeds the model's context window size, the model will truncate the response to fit the context window by dropping items from the beginning of the conversation. On some models, trimming can begin earlier because the API subtracts the model's maximum output allowance from its input limit before counting tokens.\n- `disabled` (default): If the input size will exceed the context window size for a model, the request will fail with a 400 error."
           }
         },
         "required": [],
