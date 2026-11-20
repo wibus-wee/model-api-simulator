@@ -1841,7 +1841,7 @@
             }
           }
         ],
-        "example": "gpt-6-astra"
+        "example": "gpt-6.2-astra"
       },
       "BetaModelIdsShared": {
         "anyOf": [
@@ -2167,7 +2167,7 @@
             }
           }
         ],
-        "example": "gpt-6-astra"
+        "example": "gpt-6.2-astra"
       },
       "BetaModelResponseProperties": {
         "properties": {
@@ -3234,7 +3234,7 @@
           "instructions": null,
           "max_output_tokens": null,
           "metadata": {},
-          "model": "gpt-6-astra",
+          "model": "gpt-6.2-astra",
           "object": "response",
           "output": [
             {
@@ -4061,7 +4061,7 @@
           },
           "model": {
             "$ref": "#/components/schemas/BetaModelIdsResponses",
-            "description": "Model ID used to generate the response, like `gpt-6-astra`. OpenAI\noffers a wide range of models with different capabilities, performance\ncharacteristics, and price points. Refer to the [model guide](https://developers.openai.com/api/docs/models)\nto browse and compare available models.\n"
+            "description": "Model ID used to generate the response, like `gpt-6.2-astra`. OpenAI\noffers a wide range of models with different capabilities, performance\ncharacteristics, and price points. Refer to the [model guide](https://developers.openai.com/api/docs/models)\nto browse and compare available models.\n"
           },
           "previous_response_id": {
             "anyOf": [
@@ -6671,7 +6671,7 @@
               },
               "model": {
                 "$ref": "#/components/schemas/ModelIdsShared",
-                "description": "Model ID used to generate the response, like `gpt-6-astra` or `o3`. OpenAI\noffers a wide range of models with different capabilities, performance\ncharacteristics, and price points. Refer to the [model guide](https://developers.openai.com/api/docs/models)\nto browse and compare available models.\n"
+                "description": "Model ID used to generate the response, like `gpt-6.2-astra`. OpenAI\noffers a wide range of models with different capabilities, performance\ncharacteristics, and price points. Refer to the [model guide](https://developers.openai.com/api/docs/models)\nto browse and compare available models.\n"
               },
               "moderation": {
                 "anyOf": [
@@ -6991,7 +6991,7 @@
             ],
             "created": 1694268190,
             "id": "chatcmpl-123",
-            "model": "gpt-6-astra",
+            "model": "gpt-6.2-astra",
             "obfuscation": "p9K3xT6w",
             "object": "chat.completion.chunk",
             "system_fingerprint": "fp_44709d6fcb"
@@ -7007,7 +7007,7 @@
             ],
             "created": 1694268190,
             "id": "chatcmpl-123",
-            "model": "gpt-6-astra",
+            "model": "gpt-6.2-astra",
             "obfuscation": "",
             "object": "chat.completion.chunk",
             "system_fingerprint": "fp_44709d6fcb"
@@ -8689,7 +8689,7 @@
             "type": "null"
           }
         ],
-        "description": "Model ID used to generate the response, like `gpt-6-astra`. OpenAI offers a wide range of models with different capabilities, performance characteristics, and price points. Refer to the [model guide](https://developers.openai.com/api/docs/models) to browse and compare available models."
+        "description": "Model ID used to generate the response, like `gpt-6.2-astra`. OpenAI offers a wide range of models with different capabilities, performance characteristics, and price points. Refer to the [model guide](https://developers.openai.com/api/docs/models) to browse and compare available models."
       },
       "ModelIdsResponses": {
         "anyOf": [
@@ -8770,7 +8770,7 @@
             }
           }
         ],
-        "example": "gpt-6-astra"
+        "example": "gpt-6.2-astra"
       },
       "ModelIdsShared": {
         "anyOf": [
@@ -9096,7 +9096,7 @@
             }
           }
         ],
-        "example": "gpt-6-astra"
+        "example": "gpt-6.2-astra"
       },
       "ModelResponseProperties": {
         "properties": {
@@ -10190,7 +10190,7 @@
           "instructions": null,
           "max_output_tokens": null,
           "metadata": {},
-          "model": "gpt-6-astra",
+          "model": "gpt-6.2-astra",
           "object": "response",
           "output": [
             {
@@ -10990,7 +10990,7 @@
           },
           "model": {
             "$ref": "#/components/schemas/ModelIdsResponses",
-            "description": "Model ID used to generate the response, like `gpt-6-astra`. OpenAI\noffers a wide range of models with different capabilities, performance\ncharacteristics, and price points. Refer to the [model guide](https://developers.openai.com/api/docs/models)\nto browse and compare available models.\n"
+            "description": "Model ID used to generate the response, like `gpt-6.2-astra`. OpenAI\noffers a wide range of models with different capabilities, performance\ncharacteristics, and price points. Refer to the [model guide](https://developers.openai.com/api/docs/models)\nto browse and compare available models.\n"
           },
           "previous_response_id": {
             "anyOf": [
@@ -11723,7 +11723,7 @@
       },
       "StopConfiguration": {
         "default": null,
-        "description": "Not supported with latest reasoning models `o3` and `o4-mini`.\n\nUp to 4 sequences where the API will stop generating further tokens. The\nreturned text will not contain the stop sequence.\n",
+        "description": "Not supported with reasoning models `o3` and `o4-mini`.\n\nUp to 4 sequences where the API will stop generating further tokens. The\nreturned text will not contain the stop sequence.\n",
         "oneOf": [
           {
             "default": "<|endoftext|>",
@@ -12268,6 +12268,15 @@
         "requestBody": {
           "content": {
             "application/json": {
+              "example": {
+                "messages": [
+                  {
+                    "content": "Say hello in one sentence.",
+                    "role": "user"
+                  }
+                ],
+                "model": "gpt-6.2-astra"
+              },
               "schema": {
                 "$ref": "#/components/schemas/CreateChatCompletionRequest"
               }
@@ -12404,7 +12413,7 @@
             "name": "model",
             "required": true,
             "schema": {
-              "example": "gpt-6-astra",
+              "example": "gpt-6.2-astra",
               "type": "string"
             }
           }
@@ -12454,6 +12463,10 @@
         "requestBody": {
           "content": {
             "application/json": {
+              "example": {
+                "input": "Write a one-sentence bedtime story about a unicorn.",
+                "model": "gpt-6.2-astra"
+              },
               "schema": {
                 "$ref": "#/components/schemas/CreateResponse"
               }
@@ -12537,6 +12550,10 @@
         "requestBody": {
           "content": {
             "application/json": {
+              "example": {
+                "input": "Write a one-sentence bedtime story about a unicorn.",
+                "model": "gpt-6.2-astra"
+              },
               "schema": {
                 "$ref": "#/components/schemas/BetaCreateResponse"
               }
