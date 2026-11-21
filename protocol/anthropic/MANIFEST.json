@@ -11,7 +11,7 @@
     },
     {
       "path": "resources/shared.d.ts",
-      "sha256": "979d9e8bb2de2aa9a71d1b54ec16681c0f510a4367a39f5e155a1ddc6581ca83"
+      "sha256": "271fd95a2f4f6ec234ed8edf034204a3462c7d923cad2f8dfed84053a52d9456"
     },
     {
       "path": "resources/beta/messages/messages.d.ts",
@@ -22,14 +22,14 @@
       "sha256": "49a84132efff6255f14074af9dbe35e999992d0887142131b692ce9b46313f67"
     }
   ],
-  "generatedAt": "2026-11-18T12:14:21.580Z",
+  "generatedAt": "2026-11-20T12:10:24.773Z",
   "grammarSha256": "ebdd034edaee848ac357124935db45a1c87c4473b41de1ab0f223c265c2dfea5",
   "owner": "@cradle/model-api-simulator",
-  "packageIntegrity": "sha512-j4uVct5p3aGIz/BU4K8VU5vt2A6AueHTvx2gfF3xr4mVpwH9IJMWEAUKNwSwdZSJOHQq1Za2tv5huYc5v02D0w==",
+  "packageIntegrity": "sha512-lW16YCGJ7ItUy92hehGjuMIxvhCeW8pYi4w4jzzfo8UtRbEamagUJAzAEh1VxS6wHfDh6yB+/KE/Rqp2i6elIw==",
   "provider": "anthropic",
   "refreshCommand": "pnpm protocol:refresh:anthropic",
-  "schemaSha256": "92a671ddb2fc76bbda5108ef821d37744bddddd2e3aa7c43fa178188535daba0",
-  "sdkVersion": "1.10.0",
+  "schemaSha256": "212b576478be3ca335950e2073bfd1145009e7d717039fa7ec14fa14701496a9",
+  "sdkVersion": "1.11.0",
   "selectedTypes": [
     "AnthropicMessageCreateParams",
     "AnthropicMessageCountTokensParams",
