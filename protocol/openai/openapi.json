@@ -1718,7 +1718,7 @@
             "additionalProperties": {
               "type": "string"
             },
-            "description": "Set of 16 key-value pairs that can be attached to an object. This can be\nuseful for storing additional information about the object in a structured\nformat, and querying for objects via API or the dashboard.\n\nKeys are strings with a maximum length of 64 characters. Values are strings\nwith a maximum length of 512 characters.\n",
+            "description": "Set of 16 key-value pairs that can be attached to an object. This can be\nuseful for storing additional information about the object in a structured\nformat.\n\nKeys are strings with a maximum length of 64 characters. Values are strings\nwith a maximum length of 512 characters.\n",
             "type": "object",
             "x-oaiTypeLabel": "map"
           },
@@ -1791,7 +1791,11 @@
               "gpt-6-cyber",
               "gpt-rosalind-research",
               "gpt-6-rosalind",
-              "gpt-6.2-astra-law"
+              "gpt-6.2-astra-law",
+              "gpt-6-astra-healthcare",
+              "gpt-6.1-sol-healthcare",
+              "gpt-6.2-astra-healthcare",
+              "gpt-6.2-sol-healthcare"
             ],
             "title": "ResponsesOnlyModel",
             "type": "string",
@@ -2879,12 +2883,9 @@
             "type": "array"
           },
           "type": {
+            "const": "reasoning",
             "description": "The type of the object. Always `reasoning`.\n",
-            "enum": [
-              "reasoning"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -4951,12 +4952,9 @@
             ]
           },
           "type": {
+            "const": "json_schema",
             "description": "The type of response format being defined. Always `json_schema`.",
-            "enum": [
-              "json_schema"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -5009,12 +5007,9 @@
             "type": "string"
           },
           "type": {
+            "const": "function",
             "description": "For function calling, the type is always `function`.",
-            "enum": [
-              "function"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -6246,6 +6241,7 @@
               "type": "compaction"
             }
           ],
+          "safety_identifier": "compact-review-example-001",
           "usage": {
             "input_tokens": 42897,
             "input_tokens_details": {
@@ -6287,6 +6283,21 @@
               "$ref": "#/components/schemas/ItemField"
             },
             "type": "array"
+          },
+          "safety_identifier": {
+            "anyOf": [
+              {
+                "description": "A stable identifier that was used for safety monitoring and abuse detection.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "service_tier": {
+            "description": "The service tier used for compaction, when reported.",
+            "type": "string"
           },
           "usage": {
             "$ref": "#/components/schemas/ResponseUsage",
@@ -6389,6 +6400,18 @@
                 "$ref": "#/components/schemas/PromptCacheRetentionEnum",
                 "deprecated": true,
                 "description": "How long to retain a prompt cache entry created by this request."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "safety_identifier": {
+            "anyOf": [
+              {
+                "description": "A stable identifier used for safety monitoring and abuse detection.",
+                "maxLength": 128,
+                "type": "string"
               },
               {
                 "type": "null"
@@ -8591,7 +8614,7 @@
             "additionalProperties": {
               "type": "string"
             },
-            "description": "Set of 16 key-value pairs that can be attached to an object. This can be\nuseful for storing additional information about the object in a structured\nformat, and querying for objects via API or the dashboard.\n\nKeys are strings with a maximum length of 64 characters. Values are strings\nwith a maximum length of 512 characters.\n",
+            "description": "Set of 16 key-value pairs that can be attached to an object. This can be\nuseful for storing additional information about the object in a structured\nformat.\n\nKeys are strings with a maximum length of 64 characters. Values are strings\nwith a maximum length of 512 characters.\n",
             "type": "object",
             "x-oaiTypeLabel": "map"
           },
@@ -8720,7 +8743,11 @@
               "gpt-6-cyber",
               "gpt-rosalind-research",
               "gpt-6-rosalind",
-              "gpt-6.2-astra-law"
+              "gpt-6.2-astra-law",
+              "gpt-6-astra-healthcare",
+              "gpt-6.1-sol-healthcare",
+              "gpt-6.2-astra-healthcare",
+              "gpt-6.2-sol-healthcare"
             ],
             "title": "ResponsesOnlyModel",
             "type": "string",
@@ -9835,12 +9862,9 @@
             "type": "array"
           },
           "type": {
+            "const": "reasoning",
             "description": "The type of the object. Always `reasoning`.\n",
-            "enum": [
-              "reasoning"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -11834,12 +11858,9 @@
             ]
           },
           "type": {
+            "const": "json_schema",
             "description": "The type of response format being defined. Always `json_schema`.",
-            "enum": [
-              "json_schema"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
@@ -12058,12 +12079,9 @@
             "type": "string"
           },
           "type": {
+            "const": "function",
             "description": "For function calling, the type is always `function`.",
-            "enum": [
-              "function"
-            ],
-            "type": "string",
-            "x-stainless-const": true
+            "type": "string"
           }
         },
         "required": [
