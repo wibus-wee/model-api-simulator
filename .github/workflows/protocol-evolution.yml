@@ -26,6 +26,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -51,6 +53,7 @@ jobs:
       issues: write
     env:
       HAS_UPDATE_TOKEN: ${{ secrets.PROTOCOL_UPDATE_TOKEN != '' }}
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:

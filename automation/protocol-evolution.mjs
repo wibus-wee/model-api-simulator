@@ -135,10 +135,12 @@ function delta(before, after) {
 }
 
 async function fetchText(url) {
+  const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN
   const response = await fetch(url, {
     headers: {
       'User-Agent': 'model-api-simulator-protocol-evolution',
       'Accept': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     },
     signal: AbortSignal.timeout(30000),
   })
